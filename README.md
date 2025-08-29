@@ -22,40 +22,6 @@ Aplicación web que convierte audio en texto.
 
 ---
 
-### **Modelos principales (Prisma)**  
-
-```prisma
-model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  name           String?
-  passwordHash   String?
-  creditsMinutes Int      @default(20) // minutos gratis al inicio
-  subscription   Subscription?
-  transcriptions Transcription[]
-  createdAt      DateTime @default(now())
-}
-
-model Subscription {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-  plan        String   // "basic", "pro", etc.
-  status      String   // "active", "inactive"
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-}
-
-model Transcription {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  audioUrl    String
-  text        String?
-  durationMin Int
-  createdAt   DateTime @default(now())
-}
-
 ## ✅ Checklist de implementación  
 
 ### 🔹 Infraestructura
@@ -110,4 +76,40 @@ model Transcription {
 3. **Se agotan minutos** → Se le pide registro.  
 4. **Compra plan** → Accede a minutos ilimitados según plan.  
 5. **Descarga texto** en múltiples formatos.  
+
+### **Modelos principales (Prisma)**  
+
+```prisma
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  passwordHash   String?
+  creditsMinutes Int      @default(20) // minutos gratis al inicio
+  subscription   Subscription?
+  transcriptions Transcription[]
+  createdAt      DateTime @default(now())
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  plan        String   // "basic", "pro", etc.
+  status      String   // "active", "inactive"
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Transcription {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  audioUrl    String
+  text        String?
+  durationMin Int
+  createdAt   DateTime @default(now())
+}
+
+
 
