@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider, SignedIn, SignedOut, SignIn, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import Link from 'next/link'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,18 +31,14 @@ export default function RootLayout({ children }) {
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-6">
-              <a href="/" className="text-gray-700 font-medium hover:text-blue-600">
-                Home
-              </a>
-              <a href="/pricing" className="text-gray-700 font-medium hover:text-blue-600">
-                Pricing
-              </a>
-              <a href="/faq" className="text-gray-700 font-medium hover:text-blue-600">
-                FAQ
-              </a>
-              <a href="/about" className="text-gray-700 font-medium hover:text-blue-600">
-                About
-              </a>
+              <Link href="/" className="text-gray-700 font-medium hover:text-blue-600">Home</Link>
+              <Link href="/pricing" className="text-gray-700 font-medium hover:text-blue-600">Pricing</Link>
+              <Link href="/faq" className="text-gray-700 font-medium hover:text-blue-600">FAQ</Link>
+              <Link href="/about" className="text-gray-700 font-medium hover:text-blue-600">About</Link>
+              <SignedOut>
+                <Link href="/login" className="text-gray-700 font-medium hover:text-blue-600">Sign in</Link>
+
+              </SignedOut>
             </nav>
 
             {/* User menu */}
@@ -51,14 +48,7 @@ export default function RootLayout({ children }) {
           </header>
 
           <main className="p-6 max-w-5xl mx-auto">
-            <SignedOut>
-              <div className="flex justify-center items-center min-h-[60vh]">
-                <SignIn routing="hash" />
-              </div>
-            </SignedOut>
-            <SignedIn>
-              {children}
-            </SignedIn>
+            {children}
           </main>
           <footer className="p-4 bg-gray-800 text-white text-center">
             © 2025 My App
