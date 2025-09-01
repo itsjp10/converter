@@ -6,8 +6,6 @@ import { Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-
-
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
@@ -40,7 +38,9 @@ export default function RootLayout({ children }) {
             </SignedOut>
             <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer">Get started</Button>
           </div>
-          <UserButton />
+          <SignedIn>
+            <UserButton />
+          </SignedIn>          
         </nav>
       </header>
 
