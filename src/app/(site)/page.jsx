@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,52 @@ import { Badge } from "@/components/ui/badge";
 import { Mic, Upload, Languages, Shield, Zap, AudioLines, Play, Pause, Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+// Helpers de animación -----------------------------
+function Reveal({ children, delay = 0, y = 20, once = true, className = "" }) {
+  const ref = React.useRef(null);
+  const isInView = useInView(ref, { margin: "-10% 0px -10% 0px", once });
+  return (
+    <div ref={ref} className={className}>
+      <motion.div
+        initial={{ opacity: 0, y }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6, ease: "easeOut", delay }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
+function ScrollProgressBar() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  return (
+    <motion.div
+      style={{ scaleX }}
+      className="fixed left-0 top-0 z-50 h-1 w-full origin-left bg-gradient-to-r from-cyan-400 to-blue-500"
+    />
+  );
+}
+
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
 // Landing page for an Audio → Text transcription app
 // TailwindCSS + shadcn/ui + framer-motion + lucide-react
 // Drop this in a Next.js / Vite project and route to it as your home page.
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">      
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
+      <ScrollProgressBar />
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         <Noise />
@@ -22,41 +61,41 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 pt-20 pb-12 md:pt-28">
           <div className="grid items-center gap-10 md:grid-cols-2">
             <div>
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-4xl font-bold leading-tight tracking-tight md:text-6xl"
-              >
-                Turn audio into clean, searchable text—
-                <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent"> instantly</span>.
-              </motion.h1>
-              <p className="mt-5 max-w-xl text-zinc-300">
-                Upload recordings, lectures, meetings, podcasts—get accurate transcripts with timestamps, speaker labels, and export-ready formats.
-              </p>
+              <Reveal>
+                <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+                  Turn audio into clean, searchable text—
+                  <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent"> instantly</span>.
+                </h1>
+              </Reveal>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button size="lg" className="bg-blue-500 hover:bg-blue-600">
-                  <Upload className="mr-2 size-4" /> Upload audio
-                </Button>
-                <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
-                  <Play className="mr-2 size-4" /> See a live demo
-                </Button>
-              </div>
+              <Reveal delay={0.1}>
+                <p className="mt-5 max-w-xl text-zinc-300">
+                  Upload recordings, lectures, meetings, podcasts—get accurate transcripts with timestamps, speaker labels, and export-ready formats.
+                </p>
+              </Reveal>
 
-              <div className="mt-6 flex items-center gap-4 text-xs text-zinc-400">
-                <div className="flex items-center gap-2"><Shield className="size-4" />GDPR-ready</div>
-                <div className="flex items-center gap-2"><Zap className="size-4" /><span>Under 30s for a 1‑hr file*</span></div>
-                <div className="flex items-center gap-2"><Languages className="size-4" />100+ languages</div>
-              </div>
+              <Reveal delay={0.18}>
+                <div className="mx-auto mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button size="lg" className="bg-blue-500 hover:bg-blue-600">
+                    <Upload className="mr-2 size-4" /> Upload audio
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
+                    <Play className="mr-2 size-4" /> See a live demo
+                  </Button>
+                </div>
+              </Reveal>
+
+              <Reveal delay={0.26}>
+                <div className="mt-6 flex items-center gap-4 text-xs text-zinc-400">
+                  <div className="flex items-center gap-2"><Shield className="size-4" />GDPR-ready</div>
+                  <div className="flex items-center gap-2"><Zap className="size-4" /><span>Under 30s for a 1‑hr file*</span></div>
+                  <div className="flex items-center gap-2"><Languages className="size-4" />100+ languages</div>
+                </div>
+              </Reveal>
             </div>
 
             {/* Demo card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
+            <Reveal y={24}>
               <Card className="border-white/10 bg-white/5 backdrop-blur">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base text-zinc-200">
@@ -74,120 +113,160 @@ export default function LandingPage() {
                   <TranscriptPreview />
                 </CardContent>
               </Card>
-            </motion.div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* Logos / social proof */}
       <section className="mx-auto max-w-7xl px-4 py-10">
-        <p className="mb-6 text-center text-xs uppercase tracking-wider text-zinc-400">Trusted by teams, students & creators</p>
-        <div className="grid grid-cols-2 place-items-center gap-6 opacity-70 sm:grid-cols-3 md:grid-cols-6">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-10% 0px" }}
+          transition={{ duration: 0.5 }}
+          className="mb-6 text-center text-xs uppercase tracking-wider text-zinc-400"
+        >
+          Trusted by teams, students & creators
+        </motion.p>
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          className="grid grid-cols-2 place-items-center gap-6 opacity-70 sm:grid-cols-3 md:grid-cols-6"
+        >
           {['NovaLabs', 'ClassNote', 'MeetFlow', 'PodKit', 'Syncly', 'Captionly'].map((n) => (
-            <div key={n} className="text-sm">{n}</div>
+            <motion.div key={n} variants={item} className="text-sm">{n}</motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* Features */}
       <section id="features" className="mx-auto max-w-7xl px-4 py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-2xl font-semibold md:text-4xl">Everything you need to get from voice to insight</h2>
-          <p className="mt-3 text-zinc-300">Fast, accurate, and export‑friendly. No fiddling required.</p>
-        </div>
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-semibold md:text-4xl">Everything you need to get from voice to insight</h2>
+            <p className="mt-3 text-zinc-300">Fast, accurate, and export‑friendly. No fiddling required.</p>
+          </div>
+        </Reveal>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          <Feature icon={Mic} title="Accurate by design" desc="Modern AI models with domain‑tuned prompts for meetings, lectures, and calls." />
-          <Feature icon={Languages} title="Multilingual" desc="Transcribe and auto‑translate in 100+ languages with locale‑aware punctuation." />
-          <Feature icon={Upload} title="Drag & drop" desc="Upload MP3, WAV, M4A, MP4, and more. We handle variable bit‑rates and long files." />
-          <Feature icon={Shield} title="Private & secure" desc="Encryption in transit & at rest. Keep data in your region with enterprise plan." />
-          <Feature icon={Zap} title="Lightning fast" desc="GPU‑powered pipeline. Typical 1‑hr file in under 30 seconds with queueing." />
-          <Feature icon={Check} title="Export anywhere" desc="TXT, DOCX, SRT/VTT captions, JSON with timestamps, or copy as Markdown." />
-        </div>
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          className="mt-10 grid gap-6 md:grid-cols-3"
+        >
+          <Feature motionProps={{ variants: item }} icon={Mic} title="Accurate by design" desc="Modern AI models with domain‑tuned prompts for meetings, lectures, and calls." />
+          <Feature motionProps={{ variants: item }} icon={Languages} title="Multilingual" desc="Transcribe and auto‑translate in 100+ languages with locale‑aware punctuation." />
+          <Feature motionProps={{ variants: item }} icon={Upload} title="Drag & drop" desc="Upload MP3, WAV, M4A, MP4, and more. We handle variable bit‑rates and long files." />
+          <Feature motionProps={{ variants: item }} icon={Shield} title="Private & secure" desc="Encryption in transit & at rest. Keep data in your region with enterprise plan." />
+          <Feature motionProps={{ variants: item }} icon={Zap} title="Lightning fast" desc="GPU‑powered pipeline. Typical 1‑hr file in under 30 seconds with queueing." />
+          <Feature motionProps={{ variants: item }} icon={Check} title="Export anywhere" desc="TXT, DOCX, SRT/VTT captions, JSON with timestamps, or copy as Markdown." />
+        </motion.div>
       </section>
 
       {/* How it works */}
       <section id="how" className="mx-auto max-w-7xl px-4 py-16">
-        <div className="grid gap-8 md:grid-cols-3">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-10% 0px" }}
+          className="grid gap-8 md:grid-cols-3"
+        >
           {[
             { step: 1, title: "Upload your audio", desc: "Drop a file or paste a URL. We detect language and audio quality automatically." },
             { step: 2, title: "We transcribe & label", desc: "Speaker diarization, smart punctuation, filler‑word cleanup, and timestamps." },
             { step: 3, title: "Edit & export", desc: "Quick edits in the browser. Export to SRT, DOCX, TXT, or copy to your notes." }
           ].map((s) => (
-            <Card key={s.step} className="border-white/10 bg-white/5">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  <span className="mr-2 rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-300">{s.step}</span>
-                  {s.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-zinc-300">{s.desc}</CardContent>
-            </Card>
+            <motion.div key={s.step} variants={item}>
+              <Card className="border-white/10 bg-white/5">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    <span className="mr-2 rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-300">{s.step}</span>
+                    {s.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-zinc-300">{s.desc}</CardContent>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* CTA */}
       <section className="relative mx-auto max-w-7xl px-4 pb-20">
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-600 to-cyan-500 p-6 md:p-10">
-          <div className="grid items-center gap-8 md:grid-cols-2">
-            <div>
-              <h3 className="text-2xl font-semibold md:text-3xl">Try EchoWrite free</h3>
-              <p className="mt-2 text-blue-50/90">10 minutes of transcription on us. No credit card needed.</p>
-              <form className="mt-5 flex max-w-sm gap-3">
-                <Input placeholder="Enter your email" className="bg-white text-zinc-900 placeholder:text-zinc-500" />
-                <Button type="button" className="bg-zinc-900 hover:bg-zinc-800">Get invite</Button>
-              </form>
-              <p className="mt-2 text-sm text-blue-50/80">By continuing you agree to our Terms & Privacy.</p>
-            </div>
-            <div className="rounded-2xl border border-white/20 bg-white/15 p-4">
-              <ul className="grid gap-3 text-sm">
-                {[
-                  "Unlimited uploads during trial",
-                  "Timestamped JSON export",
-                  "Speaker labels",
-                  "SRT/VTT captions",
-                  "Priority processing queue"
-                ].map((b) => (
-                  <li key={b} className="flex items-center gap-2"><Check className="size-4" /> {b}</li>
-                ))}
-              </ul>
+        <Reveal>
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-600 to-cyan-500 p-6 md:p-10">
+            <div className="grid items-center gap-8 md:grid-cols-2">
+              <div>
+                <h3 className="text-2xl font-semibold md:text-3xl">Try EchoWrite free</h3>
+                <p className="mt-2 text-blue-50/90">10 minutes of transcription on us. No credit card needed.</p>
+                <form className="mt-5 flex max-w-sm gap-3">
+                  <Input placeholder="Enter your email" className="bg-white text-zinc-900 placeholder:text-zinc-500" />
+                  <Button type="button" className="bg-zinc-900 hover:bg-zinc-800">Get invite</Button>
+                </form>
+                <p className="mt-2 text-sm text-blue-50/80">By continuing you agree to our Terms & Privacy.</p>
+              </div>
+              <div className="rounded-2xl border border-white/20 bg-white/15 p-4">
+                <ul className="grid gap-3 text-sm">
+                  {[
+                    "Unlimited uploads during trial",
+                    "Timestamped JSON export",
+                    "Speaker labels",
+                    "SRT/VTT captions",
+                    "Priority processing queue"
+                  ].map((b) => (
+                    <li key={b} className="flex items-center gap-2"><Check className="size-4" /> {b}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-4xl px-4 pb-24">
-        <h3 className="mb-6 text-center text-2xl font-semibold md:text-3xl">Frequently asked</h3>
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="item-1">
-            <AccordionTrigger>How accurate are the transcripts?</AccordionTrigger>
-            <AccordionContent>
-              We combine strong base models with light domain prompts. Clean audio (one speaker, minimal noise) typically exceeds 95% word accuracy; multi‑speaker and noisy environments vary.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-2">
-            <AccordionTrigger>Which file types are supported?</AccordionTrigger>
-            <AccordionContent>
-              MP3, WAV, M4A, AAC, FLAC, MP4, MOV, MKV, and many more. If the container has an audio stream, we can read it.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-3">
-            <AccordionTrigger>What about privacy?</AccordionTrigger>
-            <AccordionContent>
-              Files are encrypted in transit and at rest. You can request data deletion at any time. Enterprise plans support regional data residency and SSO.
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </section>      
+        <Reveal>
+          <h3 className="mb-6 text-center text-2xl font-semibold md:text-3xl">Frequently asked</h3>
+        </Reveal>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-10% 0px" }}
+        >
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>How accurate are the transcripts?</AccordionTrigger>
+              <AccordionContent>
+                We combine strong base models with light domain prompts. Clean audio (one speaker, minimal noise) typically exceeds 95% word accuracy; multi‑speaker and noisy environments vary.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-2">
+              <AccordionTrigger>Which file types are supported?</AccordionTrigger>
+              <AccordionContent>
+                MP3, WAV, M4A, AAC, FLAC, MP4, MOV, MKV, and many more. If the container has an audio stream, we can read it.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger>What about privacy?</AccordionTrigger>
+              <AccordionContent>
+                Files are encrypted in transit and at rest. You can request data deletion at any time. Enterprise plans support regional data residency and SSO.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </motion.div>
+      </section>
     </div>
   );
 }
 
-function Feature({ icon: Icon, title, desc }) {
+function Feature({ icon: Icon, title, desc, motionProps = {} }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+    <motion.div {...motionProps} className="rounded-2xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex items-center gap-3">
         <div className="grid size-10 place-items-center rounded-xl bg-white/10">
           <Icon className="size-5" />
@@ -195,7 +274,7 @@ function Feature({ icon: Icon, title, desc }) {
         <h3 className="font-medium">{title}</h3>
       </div>
       <p className="text-sm text-zinc-300">{desc}</p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -252,6 +331,14 @@ function Grid() {
 
 function Noise() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-20 mix-blend-soft-light" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 200 200\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'2\'/%3E%3CfeColorMatrix type=\'saturate\' values=\'0\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E')" }} />
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-20 mix-blend-soft-light" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 200 200\\'%3E%3Cfilter id=\\'n\\'%3E%3CfeTurbulence type=\\'fractalNoise\\' baseFrequency=\\'0.65\\' numOctaves=\\'2\\'/%3E%3CfeColorMatrix type=\\'saturate\\' values=\\'0\\'/%3E%3C/filter%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' filter=\\'url(%23n)\\'/%3E%3C/svg%3E')" }} />
   );
 }
+
+/*
+Notas:
+- Para scroll suave a los anchors (#features, #how, #faq) añade en tu globals.css:
+  html { scroll-behavior: smooth; }
+- Ajusta el trigger con viewport.margin (ej. "-20% 0px") para revelar antes.
+- Usa once:true para animar una sola vez y mejorar performance.
+*/

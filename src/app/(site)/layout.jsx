@@ -38,9 +38,11 @@ export default function RootLayout({ children }) {
             </SignedOut>
             <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer">Get started</Button>
           </div>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>          
+          <div className="flex items-end">
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
         </nav>
       </header>
 
