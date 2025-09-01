@@ -55,7 +55,7 @@ export default function LandingPage() {
       <ScrollProgressBar />
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden"> 
         <Noise />
         <Grid />
         <div className="mx-auto max-w-7xl px-4 pt-20 pb-12 md:pt-28">
@@ -306,19 +306,61 @@ function TranscriptPreview() {
   );
 }
 
-function FakeWaveform() {
+// ✅ Exporta y acepta className para controlar altura desde fuera
+export function FakeWaveform({
+  className = "",
+  bars = 64,                 // más barras = más “detalle”
+  floorPct = 0.008,           // altura mínima relativa (0..1)
+  centers = [0.18, 0.5, 0.82],
+  sigmas  = [0.06, 0.085, 0.06],
+  amps    = [0.8, 1.0, 0.8],
+  gapPx = 4,                 // separación entre barras
+  barWidth = 5,              // grosor de barra (px) tipo “equalizer”
+} = {}) {
+  const ampSum = React.useMemo(
+    () => amps.reduce((a, b) => a + b, 0),
+    [amps]
+  );
+
+  const vals = React.useMemo(() => {
+    return Array.from({ length: bars }, (_, i) => {
+      const x = i / (bars - 1);
+      const sum = centers.reduce((acc, m, idx) => {
+        const s = sigmas[idx];
+        const a = amps[idx];
+        const z = (x - m) / s;
+        return acc + a * Math.exp(-0.5 * z * z);
+      }, 0);
+
+      // normalizado 0..1 con un leve boost para marcar picos
+      const t = Math.min(1, (sum / ampSum) * 2.2);
+      const hPct = floorPct + t * (1 - floorPct); // 0..1
+      return hPct;
+    });
+  }, [bars, centers, sigmas, amps, ampSum, floorPct]);
+
   return (
-    <div className="flex h-full items-end gap-1">
-      {Array.from({ length: 60 }).map((_, i) => (
+    <div
+      className={`flex h-full w-full items-center justify-center overflow-visible ${className}`}
+      style={{ gap: `${gapPx}px`, color: "currentColor" }}
+    >
+      {vals.map((hPct, i) => (
         <div
           key={i}
-          className="w-1 flex-1 rounded-t bg-white/70"
-          style={{ height: `${8 + Math.abs(Math.sin(i * 0.35)) * 80}px`, opacity: 0.35 + (i % 7) * 0.08 }}
+          className="bg-current"
+          style={{
+            height: `${hPct * 100}%`,  // porcentaje ⇒ no se corta
+            width: barWidth,
+            borderRadius: 9999,
+          }}
         />
       ))}
     </div>
   );
 }
+
+
+
 
 function Grid() {
   return (
