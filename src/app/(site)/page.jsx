@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from 'next/link'
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +56,7 @@ export default function LandingPage() {
       <ScrollProgressBar />
 
       {/* Hero */}
-      <section className="relative overflow-hidden"> 
+      <section className="relative overflow-hidden">
         <Noise />
         <Grid />
         <div className="mx-auto max-w-7xl px-4 pt-20 pb-12 md:pt-28">
@@ -76,9 +77,12 @@ export default function LandingPage() {
 
               <Reveal delay={0.18}>
                 <div className="mx-auto mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Button size="lg" className="bg-blue-500 hover:bg-blue-600">
-                    <Upload className="mr-2 size-4" /> Upload audio
+                  <Button size="lg" className="bg-blue-500 hover:bg-blue-600" asChild>
+                    <Link href="/upload" className="">
+                      <Upload className="mr-2 size-4" /> Upload audio
+                    </Link>
                   </Button>
+
                   <Button size="lg" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
                     <Play className="mr-2 size-4" /> See a live demo
                   </Button>
@@ -312,8 +316,8 @@ export function FakeWaveform({
   bars = 64,                 // más barras = más “detalle”
   floorPct = 0.008,           // altura mínima relativa (0..1)
   centers = [0.18, 0.5, 0.82],
-  sigmas  = [0.06, 0.085, 0.06],
-  amps    = [0.8, 1.0, 0.8],
+  sigmas = [0.06, 0.085, 0.06],
+  amps = [0.8, 1.0, 0.8],
   gapPx = 4,                 // separación entre barras
   barWidth = 5,              // grosor de barra (px) tipo “equalizer”
 } = {}) {
