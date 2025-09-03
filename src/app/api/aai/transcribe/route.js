@@ -2,32 +2,35 @@
 import { AssemblyAI } from "assemblyai";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
-    const { upload_url, language = "auto" } = await req.json();
+    const { upload_url, language = "auto", fast = true } = await req.json();
+
     if (!upload_url) {
       return new Response(JSON.stringify({ error: "upload_url is required" }), { status: 400 });
     }
 
-    const client = new AssemblyAI({
-      apiKey: process.env.ASSEMBLYAI_API_KEY,
-    });
+    const apiKey = process.env.ASSEMBLYAI_API_KEY;
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Missing ASSEMBLYAI_API_KEY on server" }), { status: 500 });
+    }
 
-    // Si usas autodetección, evita setear language_code explícito.
+    const client = new AssemblyAI({ apiKey });
     const params =
       language && language !== "auto"
-        ? { audio_url: upload_url, speech_model: "universal", language_code: language }
-        : { audio_url: upload_url, speech_model: "universal" };
+        ? { audio_url: upload_url, speech_model: fast ? "nano" : "universal", language_code: language }
+        : { audio_url: upload_url, speech_model: fast ? "nano" : "universal" };
 
-    const transcript = await client.transcripts.transcribe(params);
-    // transcript = { id, status, text, ... }
+    const created = await client.transcripts.create(params);
+    if (!created?.id) {
+      return new Response(JSON.stringify({ error: "AAI create failed", raw: created }), { status: 502 });
+    }
 
-    return new Response(
-      JSON.stringify({ id: transcript.id, status: transcript.status, text: transcript.text }),
-      { status: 200 }
-    );
+    return new Response(JSON.stringify({ id: created.id, status: created.status }), { status: 200 });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    console.error("Transcribe route error:", e);
+    return new Response(JSON.stringify({ error: e.message || "Internal error" }), { status: 500 });
   }
 }

@@ -312,26 +312,80 @@ export default function UploadPage() {
                                             setLoading(true);
                                             setResults([]);
 
-                                            const lang = langOn ? language : "auto";
-
-                                            // Procesa todos los archivos en serie (o en paralelo si prefieres Promise.all)
-                                            for (const f of files) {
-                                                // 1) Subir a AssemblyAI y obtener upload_url
-                                                const uploadUrl = await uploadFileToAAI(f.file);
-
-                                                // 2) Lanzar transcripción
-                                                const t = await transcribe(uploadUrl, lang);
-
-                                                // 3) Guardar resultado
-                                                setResults((prev) => [...prev, { name: f.file.name, text: t.text, id: t.id }]);
+                                            const file = files[0]?.file;
+                                            if (!file) {
+                                                alert("No file selected");
+                                                return;
                                             }
+
+                                            // 1) Upload
+                                            const fd = new FormData();
+                                            fd.append("file", file);
+                                            const upRes = await fetch("/api/aai/upload", { method: "POST", body: fd });
+                                            const upJson = await upRes.json();
+                                            if (!upRes.ok) {
+                                                console.error("Upload error:", upJson);
+                                                alert(upJson.error || "Upload failed");
+                                                return; // ← NO seguir
+                                            }
+                                            const upload_url = upJson.upload_url;
+                                            if (!upload_url) {
+                                                alert("Upload failed: no upload_url");
+                                                return;
+                                            }
+
+                                            // 2) Create transcripción
+                                            const lang = langOn ? language : "auto";
+                                            const trRes = await fetch("/api/aai/transcribe", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ upload_url, language: lang, fast: true }),
+                                            });
+                                            const trJson = await trRes.json();
+                                            if (!trRes.ok) {
+                                                console.error("Transcribe error:", trJson);
+                                                alert(trJson.error || "Transcribe failed");
+                                                return;
+                                            }
+                                            const id = trJson.id;
+                                            if (!id) {
+                                                alert("Transcribe failed: no id");
+                                                return;
+                                            }
+
+                                            // 3) Poll
+                                            async function poll() {
+                                                const res = await fetch(`/api/aai/status?id=${id}`);
+                                                const data = await res.json();
+                                                if (!res.ok) {
+                                                    console.error("Status error:", data);
+                                                    alert(data.error || "Status failed");
+                                                    setLoading(false);
+                                                    return;
+                                                }
+                                                if (data.status === "completed") {
+                                                    setResults([{ name: file.name, text: data.text, id }]);
+                                                    setLoading(false);
+                                                    return;
+                                                }
+                                                if (data.status === "error") {
+                                                    alert(data.error || "Transcription error");
+                                                    setLoading(false);
+                                                    return;
+                                                }
+                                                setTimeout(poll, 2000);
+                                            }
+                                            poll();
                                         } catch (e) {
                                             console.error(e);
-                                            alert(e.message || "Something went wrong");
+                                            alert(e.message || "Unexpected error");
                                         } finally {
-                                            setLoading(false);
+                                            // ojo: no pongas setLoading(false) aquí si usas polling;
+                                            // lo manejo dentro de poll() para no cortar antes de tiempo.
                                         }
                                     }}
+
+
 
                                 >
                                     Convert to text
