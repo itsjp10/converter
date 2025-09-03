@@ -290,7 +290,9 @@ export default function UploadPage() {
                                         <option value="pt">Português</option>
                                         <option value="fr">Français</option>
                                         <option value="de">Deutsch</option>
+                                        <option value="ru">Русский</option>  {/* ← nuevo */}
                                     </select>
+
                                 </div>
 
                                 <div className="text-sm">
@@ -336,11 +338,13 @@ export default function UploadPage() {
 
                                             // 2) Create transcripción
                                             const lang = langOn ? language : "auto";
+
                                             const trRes = await fetch("/api/aai/transcribe", {
                                                 method: "POST",
                                                 headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({ upload_url, language: lang, fast: true }),
+                                                body: JSON.stringify({ upload_url, language: lang, fast: true }), // fast puede cambiar abajo
                                             });
+
                                             const trJson = await trRes.json();
                                             if (!trRes.ok) {
                                                 console.error("Transcribe error:", trJson);

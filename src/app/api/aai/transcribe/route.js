@@ -18,17 +18,31 @@ export async function POST(req) {
     }
 
     const client = new AssemblyAI({ apiKey });
-    const params =
-      language && language !== "auto"
-        ? { audio_url: upload_url, speech_model: fast ? "nano" : "universal", language_code: language }
-        : { audio_url: upload_url, speech_model: fast ? "nano" : "universal" };
+
+    // --- Selección de modelo según idioma ---
+    let speech_model = "universal";
+    let params;
+
+    if (language === "auto") {
+      // Auto-detección → universal (multilingüe)
+      speech_model = "universal";
+      params = { audio_url: upload_url, speech_model };
+    } else if (language === "en" && fast) {
+      // Inglés + rápido → nano
+      speech_model = "nano";
+      params = { audio_url: upload_url, speech_model, language_code: "en" };
+    } else {
+      // Cualquier idioma específico (incl. 'en' sin fast) → universal con language_code
+      speech_model = "universal";
+      params = { audio_url: upload_url, speech_model, language_code: language };
+    }
 
     const created = await client.transcripts.create(params);
     if (!created?.id) {
       return new Response(JSON.stringify({ error: "AAI create failed", raw: created }), { status: 502 });
     }
 
-    return new Response(JSON.stringify({ id: created.id, status: created.status }), { status: 200 });
+    return new Response(JSON.stringify({ id: created.id, status: created.status, speech_model, language }), { status: 200 });
   } catch (e) {
     console.error("Transcribe route error:", e);
     return new Response(JSON.stringify({ error: e.message || "Internal error" }), { status: 500 });
