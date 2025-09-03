@@ -4,7 +4,6 @@ import React from "react";
 import { motion, useInView } from "framer-motion";
 import { Button, } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Trash2, FileAudio2, Languages, Clock, } from "lucide-react";
 
@@ -47,6 +46,40 @@ function Noise() {
     );
 }
 /* -------------------------------------------------------------- */
+async function uploadFileToAAI(file) {
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const res = await fetch("/api/aai/upload", {
+        method: "POST",
+        body: fd,
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+    }
+    const data = await res.json(); // { upload_url }
+    return data.upload_url;
+}
+
+async function transcribe(upload_url, language) {
+    const res = await fetch("/api/aai/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upload_url, language }),
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Transcription failed");
+    }
+    return res.json(); // { id, status, text }
+}
+
+
+
+
 
 const BYTES_ACCEPT =
     "audio/*,video/mp4,video/quicktime,video/x-matroska,video/webm";
@@ -57,6 +90,10 @@ export default function UploadPage() {
     const [langOn, setLangOn] = React.useState(false);
     const [language, setLanguage] = React.useState("auto");
     const balanceMinutes = 75; // ejemplo: 1:15:00
+
+    const [results, setResults] = React.useState([]); // [{name, text, id}]
+    const [loading, setLoading] = React.useState(false);
+
 
     // Cargar duración real de cada audio/video
     const addFiles = React.useCallback((fileList) => {
@@ -270,22 +307,56 @@ export default function UploadPage() {
                                 <Button
                                     disabled={files.length === 0}
                                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                    onClick={() => {
-                                        // Aquí haces tu submit real (fetch/route action).
-                                        console.log("Convert to text →", {
-                                            files,
-                                            language: langOn ? language : "auto",
-                                        });
+                                    onClick={async () => {
+                                        try {
+                                            setLoading(true);
+                                            setResults([]);
+
+                                            const lang = langOn ? language : "auto";
+
+                                            // Procesa todos los archivos en serie (o en paralelo si prefieres Promise.all)
+                                            for (const f of files) {
+                                                // 1) Subir a AssemblyAI y obtener upload_url
+                                                const uploadUrl = await uploadFileToAAI(f.file);
+
+                                                // 2) Lanzar transcripción
+                                                const t = await transcribe(uploadUrl, lang);
+
+                                                // 3) Guardar resultado
+                                                setResults((prev) => [...prev, { name: f.file.name, text: t.text, id: t.id }]);
+                                            }
+                                        } catch (e) {
+                                            console.error(e);
+                                            alert(e.message || "Something went wrong");
+                                        } finally {
+                                            setLoading(false);
+                                        }
                                     }}
+
                                 >
                                     Convert to text
                                 </Button>
                             </div>
                         </CardContent>
                     </Card>
+                    {results.length > 0 && (
+                        <section className="mt-8 space-y-4">
+                            <h2 className="text-xl font-semibold">Results</h2>
+                            {results.map((r, i) => (
+                                <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                                    <p className="text-sm text-zinc-400 mb-1">{r.name}</p>
+                                    <p className="whitespace-pre-wrap text-zinc-100">{r.text || "(empty transcript)"}</p>
+                                </div>
+                            ))}
+                        </section>
+                    )}
+
+                    {loading && (
+                        <p className="mt-4 text-sm text-zinc-400">Processing… This can take a moment depending on audio length.</p>
+                    )}
+
                 </section>
 
-                {/* Extra: “Hints” como en la imagen */}
                 <div className="mt-6 flex flex-wrap gap-2">
                     <Badge variant="secondary" className="bg-white/10 text-white">
                         Fast queue
