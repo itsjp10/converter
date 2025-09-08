@@ -2,6 +2,7 @@
 import React from "react";
 import Link from 'next/link'
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import FAQSection from "@/components/marketing/FAQSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,82 @@ const item = {
 
 // Landing page for an Audio → Text transcription app
 // TailwindCSS + shadcn/ui + framer-motion + lucide-react
-// Drop this in a Next.js / Vite project and route to it as your home page.
+
+const FAQ_ITEMS = [
+  {
+    question: "¿Qué tan precisas son las transcripciones?",
+    answer: (
+      <>
+        Con audio limpio (1 hablante, poco ruido) solemos superar el <strong>95% de precisión</strong>.
+        En reuniones con varios hablantes o ruido, la precisión varía; por eso incluimos <em>diarización</em>,
+        <em> puntuación inteligente</em> y edición rápida para pulir el resultado.
+      </>
+    ),
+  },
+  {
+    question: "¿Qué tipos de archivo se aceptan?",
+    answer: (
+      <>
+        MP3, WAV, M4A, AAC, FLAC, MP4, MOV, MKV, entre otros. Si el contenedor tiene pista de audio, lo leemos.
+        Para archivos muy largos o variables en bitrate, tenemos cola prioritaria para evitar timeouts.
+      </>
+    ),
+  },
+  {
+    question: "¿Qué hay sobre privacidad y seguridad?",
+    answer: (
+      <>
+        Ciframos en tránsito y en reposo. Puedes solicitar <strong>eliminación de datos</strong> cuando quieras.
+        En planes enterprise hay <em>residencia de datos regional</em> y SSO.
+      </>
+    ),
+  },
+  {
+    question: "¿Detectan automáticamente el idioma?",
+    answer: (
+      <>
+        Sí. La detección automática funciona en +100 idiomas. También puedes <strong>forzar el idioma</strong> si lo prefieres
+        (útil en audios con mezcla de idiomas o acentos muy marcados).
+      </>
+    ),
+  },
+  {
+    question: "¿Qué tan rápido es el proceso?",
+    answer: (
+      <>
+        Nuestra canalización con GPU procesa un archivo de 1 hora en <strong>menos de ~30 s</strong> en condiciones ideales
+        (según carga y plan). Si hay cola, entra en una <em>priority queue</em> para minimizar el tiempo de espera.
+      </>
+    ),
+  },
+  {
+    question: "¿Puedo exportar subtítulos y timestamps?",
+    answer: (
+      <>
+        Sí. Exporta <strong>SRT/VTT</strong>, <strong>DOCX</strong>, <strong>TXT</strong> y <strong>JSON con timestamps</strong>.
+        También puedes copiar como Markdown.
+      </>
+    ),
+  },
+  {
+    question: "¿Puedo editar el texto dentro de la app?",
+    answer: (
+      <>
+        Totalmente. El editor en el navegador permite correcciones rápidas, buscar/reemplazar y revisión por hablante.
+      </>
+    ),
+  },
+  {
+    question: "¿Tienen límite en la duración de los archivos?",
+    answer: (
+      <>
+        En el plan gratuito tienes <strong>10 minutos de transcripción</strong>. Los planes de pago amplían duración por archivo,
+        horas mensuales y prioridad de procesamiento.
+      </>
+    ),
+  },
+];
+
 
 export default function LandingPage() {
   return (
@@ -235,34 +311,8 @@ export default function LandingPage() {
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-4xl px-4 pb-24">
         <Reveal>
-          <h3 className="mb-6 text-center text-2xl font-semibold md:text-3xl">Frequently asked</h3>
+          <FAQSection items={FAQ_ITEMS} className="pb-24 px-4" />
         </Reveal>
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-10% 0px" }}
-        >
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>How accurate are the transcripts?</AccordionTrigger>
-              <AccordionContent>
-                We combine strong base models with light domain prompts. Clean audio (one speaker, minimal noise) typically exceeds 95% word accuracy; multi‑speaker and noisy environments vary.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger>Which file types are supported?</AccordionTrigger>
-              <AccordionContent>
-                MP3, WAV, M4A, AAC, FLAC, MP4, MOV, MKV, and many more. If the container has an audio stream, we can read it.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger>What about privacy?</AccordionTrigger>
-              <AccordionContent>
-                Files are encrypted in transit and at rest. You can request data deletion at any time. Enterprise plans support regional data residency and SSO.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </motion.div>
       </section>
     </div>
   );
@@ -364,8 +414,6 @@ export function FakeWaveform({
 }
 
 
-
-
 function Grid() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -380,11 +428,3 @@ function Noise() {
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-20 mix-blend-soft-light" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 200 200\\'%3E%3Cfilter id=\\'n\\'%3E%3CfeTurbulence type=\\'fractalNoise\\' baseFrequency=\\'0.65\\' numOctaves=\\'2\\'/%3E%3CfeColorMatrix type=\\'saturate\\' values=\\'0\\'/%3E%3C/filter%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' filter=\\'url(%23n)\\'/%3E%3C/svg%3E')" }} />
   );
 }
-
-/*
-Notas:
-- Para scroll suave a los anchors (#features, #how, #faq) añade en tu globals.css:
-  html { scroll-behavior: smooth; }
-- Ajusta el trigger con viewport.margin (ej. "-20% 0px") para revelar antes.
-- Usa once:true para animar una sola vez y mejorar performance.
-*/
