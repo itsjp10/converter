@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Mic, Upload, Languages, Shield, Zap, AudioLines, Play, Pause, Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CreditCard, Settings, MessageSquare, Bot } from "lucide-react";
 
 // Helpers de animación -----------------------------
 function Reveal({ children, delay = 0, y = 20, once = true, className = "" }) {
@@ -52,76 +53,28 @@ const item = {
 
 const FAQ_ITEMS = [
   {
-    question: "¿Qué tan precisas son las transcripciones?",
-    answer: (
-      <>
-        Con audio limpio (1 hablante, poco ruido) solemos superar el <strong>95% de precisión</strong>.
-        En reuniones con varios hablantes o ruido, la precisión varía; por eso incluimos <em>diarización</em>,
-        <em> puntuación inteligente</em> y edición rápida para pulir el resultado.
-      </>
-    ),
+    category: "General",
+    icon: MessageSquare,
+    question: "Is there a free trial?",
+    answer: <>Yes — try it free for 10 minutes of transcription. No credit card needed.</>,
   },
   {
-    question: "¿Qué tipos de archivo se aceptan?",
-    answer: (
-      <>
-        MP3, WAV, M4A, AAC, FLAC, MP4, MOV, MKV, entre otros. Si el contenedor tiene pista de audio, lo leemos.
-        Para archivos muy largos o variables en bitrate, tenemos cola prioritaria para evitar timeouts.
-      </>
-    ),
+    category: "Pricing",
+    icon: CreditCard,
+    question: "How does billing work?",
+    answer: <>Monthly subscription with prorated upgrades. Cancel anytime.</>,
   },
   {
-    question: "¿Qué hay sobre privacidad y seguridad?",
-    answer: (
-      <>
-        Ciframos en tránsito y en reposo. Puedes solicitar <strong>eliminación de datos</strong> cuando quieras.
-        En planes enterprise hay <em>residencia de datos regional</em> y SSO.
-      </>
-    ),
+    category: "Dashboard",
+    icon: Settings,
+    question: "Can I change my account email?",
+    answer: <>Yes, from Settings → Profile. We’ll re-verify your address.</>,
   },
   {
-    question: "¿Detectan automáticamente el idioma?",
-    answer: (
-      <>
-        Sí. La detección automática funciona en +100 idiomas. También puedes <strong>forzar el idioma</strong> si lo prefieres
-        (útil en audios con mezcla de idiomas o acentos muy marcados).
-      </>
-    ),
-  },
-  {
-    question: "¿Qué tan rápido es el proceso?",
-    answer: (
-      <>
-        Nuestra canalización con GPU procesa un archivo de 1 hora en <strong>menos de ~30 s</strong> en condiciones ideales
-        (según carga y plan). Si hay cola, entra en una <em>priority queue</em> para minimizar el tiempo de espera.
-      </>
-    ),
-  },
-  {
-    question: "¿Puedo exportar subtítulos y timestamps?",
-    answer: (
-      <>
-        Sí. Exporta <strong>SRT/VTT</strong>, <strong>DOCX</strong>, <strong>TXT</strong> y <strong>JSON con timestamps</strong>.
-        También puedes copiar como Markdown.
-      </>
-    ),
-  },
-  {
-    question: "¿Puedo editar el texto dentro de la app?",
-    answer: (
-      <>
-        Totalmente. El editor en el navegador permite correcciones rápidas, buscar/reemplazar y revisión por hablante.
-      </>
-    ),
-  },
-  {
-    question: "¿Tienen límite en la duración de los archivos?",
-    answer: (
-      <>
-        En el plan gratuito tienes <strong>10 minutos de transcripción</strong>. Los planes de pago amplían duración por archivo,
-        horas mensuales y prioridad de procesamiento.
-      </>
-    ),
+    category: "API",
+    icon: Bot,
+    question: "Do you have a public API?",
+    answer: <>Yes. REST endpoints with keys, rate limits, and webhooks.</>,
   },
 ];
 
