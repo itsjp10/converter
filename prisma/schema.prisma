@@ -25,4 +25,5 @@ model Transcription {
   duration Int // duration in seconds
   format String
   language String
+  createdAt DateTime @default(now())
 }
