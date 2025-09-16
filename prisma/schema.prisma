@@ -12,10 +12,12 @@ datasource db {
 }
 
 model User {
+  id String @id @default(cuid())
   clerkId String @unique
   name String 
-  credits Int
-  plan String
+  credits Int @default(0)
+  plan String @default("basic")
+  createdAt DateTime @default(now())
 }
 
 model Transcription {
