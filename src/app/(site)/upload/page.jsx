@@ -370,6 +370,19 @@ export default function UploadPage() {
                                                 if (data.status === "completed") {
                                                     setResults([{ name: file.name, text: data.text, id }]);
                                                     setLoading(false);
+                                                    const newTranscription = await fetch("/api/aai/transcription", {
+                                                        method: "POST",
+                                                        headers: {
+                                                            "Content-Type": "application/json",
+                                                        },
+                                                        body: JSON.stringify({
+                                                            content: data.text,
+                                                            title: file.name,
+                                                            duration: 120,
+                                                            language: language,
+                                                        }),
+                                                    });
+                                                    console.log(newTranscription)
                                                     return;
                                                 }
                                                 if (data.status === "error") {

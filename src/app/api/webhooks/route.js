@@ -13,7 +13,7 @@ export async function POST(req) {
     if (evt.type != 'user.created') {
       return NextResponse.json({ message: 'Event type not handled' })
     }
-    console.log(prisma)
+    
     const newUser = await prisma.user.create({
       data: {
         clerkId: id,
