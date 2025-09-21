@@ -6,19 +6,19 @@ export async function POST(req) {
     try {
         const { userId: clerkId } = await auth(); // Clerk userId (ClerkID)
 
-        if (!clerkId) {
+        if (!clerkId) { //checking if user is logged in
             console.log("No user ID found");
             return new Response("Unauthorized", { status: 401 });
         }
 
-        const body = await req.json();
+        const body = await req.json(); //making the request
         const { content, title, duration, language } = body;
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({ //finding user if logged in db
             where: { clerkId: clerkId },
         });
 
-        const newTranscription = await prisma.transcription.create({
+        const newTranscription = await prisma.transcription.create({ //creating new transcription
             data: {
                 content,
                 title,
