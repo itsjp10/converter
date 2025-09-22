@@ -6,13 +6,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
-    const { upload_url, language = "auto", fast = true } = await req.json();
+    const { upload_url, language = "auto", fast = true } = await req.json(); // Valores del upload
 
     if (!upload_url) {
-      return new Response(JSON.stringify({ error: "upload_url is required" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "upload_url is required" }), { status: 400 }); // Bad Request
     }
 
-    const apiKey = process.env.ASSEMBLYAI_API_KEY;
+    const apiKey = process.env.ASSEMBLYAI_API_KEY; // conectamos con aai api key
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Missing ASSEMBLYAI_API_KEY on server" }), { status: 500 });
     }
@@ -37,7 +37,7 @@ export async function POST(req) {
       params = { audio_url: upload_url, speech_model, language_code: language };
     }
 
-    const created = await client.transcripts.create(params);
+    const created = await client.transcripts.create(params); // Crear la transcripción con los parámetros adecuados
     if (!created?.id) {
       return new Response(JSON.stringify({ error: "AAI create failed", raw: created }), { status: 502 });
     }
