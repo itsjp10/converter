@@ -14,7 +14,7 @@ export async function POST(req) {
         const body = await req.json(); //making the request
         const { content, title, duration, language } = body;
 
-        const user = await prisma.user.findUnique({ //finding user if logged in db
+        const user = await prisma.user.findUnique({ //finding user if logged in db 
             where: { clerkId: clerkId },
         });
 
