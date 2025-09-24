@@ -1,6 +1,8 @@
 import { Inter } from "next/font/google";
 import "../globals.css";
 import { ClerkProvider, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 import Link from 'next/link'
 import { Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +42,13 @@ export default function RootLayout({ children }) {
           </div>
           <div className="flex items-end">
             <SignedIn>
+              <SidebarProvider> {/*this is the sidebar from shadcn*/}
+                <AppSidebar />
+                <main>
+                  <SidebarTrigger />
+                  {children}
+                </main>
+              </SidebarProvider>
               <UserButton />
             </SignedIn>
           </div>
