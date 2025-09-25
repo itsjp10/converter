@@ -148,8 +148,7 @@ export function AppSidebar({ ...props }) {
             name: user.fullName,
             email: user.emailAddresses[0]?.emailAddress,
             avatar: user.imageUrl,
-          }} /> : 
-          <div className="p-4"><Link href="/login" className="text-sm font-medium hover:underline">Sign in</Link></div>}        
+          }} /> : <NavUser/>}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
