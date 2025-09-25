@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
         >
             <SidebarProvider>
                 <AppSidebar />
-                <main>
+                <main className="w-full min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
                     <SidebarTrigger />
                     <ModeToggle />
                     {children}

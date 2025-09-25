@@ -20,6 +20,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
 // This is sample data.
@@ -142,6 +143,7 @@ export function AppSidebar({ ...props }) {
       <SidebarContent>
         <NavMain items={data.navMain} />
       </SidebarContent>
+      <SidebarSeparator/>
       <SidebarFooter>
         {isLoaded && isSignedIn && user ? <NavUser
           user={{
