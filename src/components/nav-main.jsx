@@ -1,6 +1,8 @@
 "use client"
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Frame, Upload, Files } from "lucide-react";
+import Link from 'next/link'
+
 
 import {
   Collapsible,
@@ -25,6 +27,30 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Link href="/dashboard">
+              <Frame />
+              <span>Dashboard</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Link href="/dashboard/upload">
+              <Upload />
+              <span>Convert</span>              
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Link href="/dashboard/transcriptions">
+              <Files />
+              <span>Transcriptions</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
         {items.map((item) => (
           <Collapsible
             key={item.title}
