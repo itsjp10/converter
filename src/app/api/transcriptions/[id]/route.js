@@ -16,5 +16,4 @@ export async function GET(req, { params }) {
     } catch (error) {
         return NextResponse.json({ error: "Error fetching transcriptions" }, { status: 500 })
     }
-
 }

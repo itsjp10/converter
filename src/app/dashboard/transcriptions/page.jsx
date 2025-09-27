@@ -74,6 +74,16 @@ export default function TranscriptionsPage() {
         getTranscriptions();
     }, [user]);
 
+    const handleDelete = async () => {
+        await fetch("/api/transcriptions", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: selected }),
+        })
+        setFiles(files.filter(f => !selected.includes(f.id)))
+        setSelected([])
+    }
+
     if (!user) return <p>Loading...</p>;
 
     return (
@@ -183,15 +193,12 @@ export default function TranscriptionsPage() {
                     <div className="flex w-full max-w-sm items-center justify-between rounded-xl border border-white/10 bg-zinc-900 px-4 py-2">
                         {/* Texto con contador */}
                         <p className="text-sm text-zinc-200">
-                            Selected files: {selected.length} 
+                            Selected files: {selected.length}
                         </p>
 
                         {/* Botón eliminar solo con ícono */}
                         <button
-                            onClick={() => {
-                                // lógica de delete aquí
-                                console.log("delete", selected);
-                            }}
+                            onClick={() => handleDelete()}
                             className="flex items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20 transition-colors"
                         >
                             <Trash2 className="h-4 w-4" />
