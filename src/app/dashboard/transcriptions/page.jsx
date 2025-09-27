@@ -21,9 +21,10 @@ function Reveal({ children, delay = 0, y = 16 }) {
 
 export default function TranscriptionsPage() {
     const [user, setUser] = useState(null);
-    const [files, setFiles] = useState([])
+    const [files, setFiles] = useState([]);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState([]);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const toggleAll = (checked) => {
         if (checked) {
@@ -85,6 +86,7 @@ export default function TranscriptionsPage() {
         })
         setFiles(files.filter(f => !selected.includes(f.id)))
         setSelected([])
+        setShowConfirm(false);
     }
 
     if (!user) return <p>Loading...</p>;
@@ -201,11 +203,45 @@ export default function TranscriptionsPage() {
 
                         {/* Botón eliminar solo con ícono */}
                         <button
-                            onClick={() => handleDelete()}
+                            onClick={() => setShowConfirm(true)}
                             className="flex items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20 transition-colors"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Modal de confirmación */}
+            {showConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                    {/* Fondo */}
+                    <div
+                        className="absolute inset-0 bg-black/60"
+                        onClick={() => setShowConfirm(false)}
+                    />
+                    {/* Contenido */}
+                    <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-lg">
+                        <h2 className="text-lg font-medium text-zinc-200">Confirm delete</h2>
+                        <p className="mt-2 text-sm text-zinc-400">
+                            Are you sure you want to delete {selected.length} file{selected.length > 1 ? "s" : ""}? This action cannot be undone.
+                        </p>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowConfirm(false)}
+                                className="rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
