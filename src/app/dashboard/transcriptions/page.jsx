@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { FileAudio2, Search } from "lucide-react";
+import { FileAudio2, Search, Trash2 } from "lucide-react";
 
 /* Animación reveal */
 function Reveal({ children, delay = 0, y = 16 }) {
@@ -178,6 +178,28 @@ export default function TranscriptionsPage() {
 
                 </Card>
             </Reveal>
+            {selected.length > 0 && (
+                <div className="fixed bottom-4 left-0 right-0 flex justify-center px-4">
+                    <div className="flex w-full max-w-sm items-center justify-between rounded-xl border border-white/10 bg-zinc-900 px-4 py-2">
+                        {/* Texto con contador */}
+                        <p className="text-sm text-zinc-200">
+                            Selected files: {selected.length} 
+                        </p>
+
+                        {/* Botón eliminar solo con ícono */}
+                        <button
+                            onClick={() => {
+                                // lógica de delete aquí
+                                console.log("delete", selected);
+                            }}
+                            className="flex items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20 transition-colors"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
