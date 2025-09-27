@@ -96,12 +96,28 @@ export default function TranscriptionsPage() {
                     <CardContent className="min-h-[200px]">
                         {/* Encabezado */}
                         <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
-                            <input
-                                type="checkbox"
-                                checked={selected.length === files.length && files.length > 0}
-                                onChange={(e) => toggleAll(e.target.checked)}
-                                className="h-4 w-4 cursor-pointer"
-                            />
+                            <label className="flex items-center justify-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selected.length === files.length && files.length > 0}
+                                    onChange={(e) => toggleAll(e.target.checked)}
+                                    className="peer hidden"
+                                />
+                                <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                        peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
+                        flex items-center justify-center transition-colors">
+                                    {/* Checkmark */}
+                                    <svg
+                                        className="hidden peer-checked:block h-3 w-3 text-white"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </label>
                             <span>Name</span>
                             <span>Uploaded</span>
                             <span>Duration</span>
@@ -115,12 +131,27 @@ export default function TranscriptionsPage() {
                                     className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5"
                                 >
                                     {/* Checkbox */}
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.includes(file.id)}
-                                        onChange={() => toggleOne(file.id)}
-                                        className="h-4 w-4 cursor-pointer"
-                                    />
+                                    <label className="flex items-center justify-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={selected.includes(file.id)}
+                                            onChange={() => toggleOne(file.id)}
+                                            className="peer hidden"
+                                        />
+                                        <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                                peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
+                                flex items-center justify-center transition-colors">
+                                            <svg
+                                                className="hidden peer-checked:block h-3 w-3 text-white"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    </label>
 
                                     {/* Name */}
                                     <div className="flex items-center gap-2 truncate">
@@ -135,13 +166,14 @@ export default function TranscriptionsPage() {
                                     <span className="text-zinc-300">{file.duration}</span>
                                 </div>
                             ))
-                        ) : (                            
+                        ) : (
                             <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
                                 <p className="col-span-4 text-center text-sm text-zinc-400">
                                     No files found.
                                 </p>
                             </div>
                         )}
+
                     </CardContent>
 
                 </Card>
