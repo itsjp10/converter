@@ -143,7 +143,8 @@ export default function TranscriptionsPage() {
                             filteredFiles.map((file) => (
                                 <div
                                     key={file.id}
-                                    className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5"
+                                    className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
+                                    
                                 >
                                     {/* Checkbox */}
                                     <label className="flex items-center justify-center cursor-pointer">
