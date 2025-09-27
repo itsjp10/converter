@@ -27,11 +27,14 @@ export default function TranscriptionsPage() {
 
     const toggleAll = (checked) => {
         if (checked) {
-            setSelected(files.map((f) => f.id));
+            setSelected(filteredFiles.map((f) => f.id));
         } else {
-            setSelected([]);
+            setSelected((prev) =>
+                prev.filter((id) => !filteredFiles.some((f) => f.id === id))
+            );
         }
     };
+
 
     const toggleOne = (id) => {
         setSelected((prev) =>
