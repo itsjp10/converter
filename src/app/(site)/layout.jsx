@@ -35,7 +35,9 @@ export default function RootLayout({ children }) {
             <SignedOut>
               <Link href="/login" className="hidden sm:inline-flex cursor-pointer text-white">Sign in</Link>
             </SignedOut>
-            <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer">Get started</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 cursor-pointer" asChild>
+              <Link href="/dashboard/upload">Get started</Link>
+            </Button>
           </div>
           <div className="flex items-end">
             <SignedIn>
