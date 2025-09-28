@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { FileAudio2, Search, Trash2 } from "lucide-react";
+import { FileAudio2, Search, Trash2, ArrowLeft, LogIn } from "lucide-react";
 import Loading from "./loading";
-
-
 import { useRouter } from "next/navigation";
 
 /* Animación reveal */
@@ -22,7 +20,6 @@ function Reveal({ children, delay = 0, y = 16 }) {
     );
 }
 
-
 export default function TranscriptionsPage() {
     const [user, setUser] = useState(null);
     const [files, setFiles] = useState([]);
@@ -30,7 +27,7 @@ export default function TranscriptionsPage() {
     const [selected, setSelected] = useState([]);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-
+    const [error, setError] = useState(null);
 
     const router = useRouter();
 
@@ -44,7 +41,6 @@ export default function TranscriptionsPage() {
         }
     };
 
-
     const toggleOne = (id) => {
         setSelected((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -55,32 +51,39 @@ export default function TranscriptionsPage() {
         f.title.toLowerCase().includes(search.toLowerCase())
     );
 
+    // 🔹 Fetch user
     useEffect(() => {
         const getUser = async () => {
             try {
                 const res = await fetch("/api/user");
-                if (!res.ok) throw new Error("Error fetching user");
+                if (!res.ok) throw new Error(`User fetch failed: ${res.status}`);
                 const data = await res.json();
                 setUser(data.user);
             } catch (err) {
-                console.error(err);
+                setError(err.message);
+                setIsLoading(false);
             }
         };
-
         getUser();
     }, []);
 
+    // 🔹 Fetch transcriptions
     useEffect(() => {
+        if (!user) {
+            setIsLoading(false);
+            return;
+        }
+
         const getTranscriptions = async () => {
             try {
-                if (!user) return;
+                setIsLoading(true);
                 const res = await fetch(`/api/transcriptions?userId=${user.id}`);
-                if (!res.ok) throw new Error("Error fetching transcriptions");
+                if (!res.ok)
+                    throw new Error(`Transcriptions fetch failed: ${res.status}`);
                 const data = await res.json();
                 setFiles(data);
-
             } catch (err) {
-                console.error(err);
+                setError(err.message);
             } finally {
                 setIsLoading(false);
             }
@@ -91,55 +94,96 @@ export default function TranscriptionsPage() {
 
     function formatDate(isoString) {
         const date = new Date(isoString);
-
-        const dateOptions = {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-        };
-
-        const timeOptions = {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false, // 24h
-        };
-
+        const dateOptions = { day: "2-digit", month: "long", year: "numeric" };
+        const timeOptions = { hour: "2-digit", minute: "2-digit", hour12: false };
         const formattedDate = date.toLocaleDateString("en-GB", dateOptions);
         const formattedTime = date.toLocaleTimeString("en-GB", timeOptions);
-
         return `${formattedDate}, ${formattedTime}`;
     }
 
     function formatDuration(totalSeconds) {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-
         if (minutes > 0) {
-            // minutos con 2 dígitos, pero 00 en segundos
             if (seconds == 0) {
                 return `${String(minutes).padStart(2, "0")} min`;
             }
-            // minutos con 2 dígitos, segundos con 2 dígitos
-            return `${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(2, "0")} sec`;
+            return `${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(
+                2,
+                "0"
+            )} sec`;
         } else {
-            // solo segundos, con 2 dígitos
             return `${String(seconds).padStart(2, "0")} sec`;
         }
     }
 
+    // 🔹 Acción borrar
     const handleDelete = async () => {
         await fetch("/api/transcriptions", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ids: selected }),
-        })
-        setFiles(files.filter(f => !selected.includes(f.id)))
-        setSelected([])
+        });
+        setFiles(files.filter((f) => !selected.includes(f.id)));
+        setSelected([]);
         setShowConfirm(false);
+    };
+
+    // 🔹 Loading
+    if (isLoading) return <Loading />;
+
+    // 🔹 Error personalizado
+    if (error) {
+        const is401 = error.includes("401");
+        const is404 = error.includes("404");
+
+        return (
+            <div className="flex min-h-screen items-center justify-center px-4">
+                <Card className="max-w-md border-white/10 bg-white/5 backdrop-blur p-6 text-center">
+                    <CardTitle
+                        className={`text-lg mb-2 ${is401 ? "text-blue-400" : "text-red-400"}`}
+                    >
+                        {is401
+                            ? "You need to log in"
+                            : is404
+                                ? "Not found"
+                                : "Something went wrong"}
+                    </CardTitle>
+
+                    <p className="text-sm text-zinc-400 mb-4">
+                        {is401
+                            ? "Your session has expired or you’re not logged in. Please sign in to continue."
+                            : is404
+                                ? "The requested resource doesn’t exist."
+                                : "An unexpected error occurred. Try again later."}
+                    </p>
+
+                    {is401 ? (
+                        <div className="flex justify-center">
+                            <button
+                                onClick={() => router.push("/login")}
+                                className="inline-flex items-center gap-2 rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-300 hover:bg-blue-500/20 transition-colors"
+                            >
+                                <LogIn className="h-4 w-4" />
+                                Go to Login
+                            </button>
+                        </div>
+
+                    ) : (
+                        <button
+                            onClick={() => router.push("/dashboard")}
+                            className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to Dashboard
+                        </button>
+                    )}
+                </Card>
+            </div>
+        );
     }
 
-    if (!user || isLoading) return <Loading />;
-
+    // 🔹 UI principal
     return (
         <div className="flex w-full justify-center px-4 py-8">
             <Reveal>
@@ -169,9 +213,8 @@ export default function TranscriptionsPage() {
                                     className="peer hidden"
                                 />
                                 <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
-                        peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
-                        flex items-center justify-center transition-colors">
-                                    {/* Checkmark */}
+                  peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
+                  flex items-center justify-center transition-colors">
                                     <svg
                                         className="hidden peer-checked:block h-3 w-3 text-white"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -191,7 +234,6 @@ export default function TranscriptionsPage() {
                         {/* Lista */}
                         {filteredFiles.length > 0 ? (
                             filteredFiles.map((file) => (
-
                                 <div
                                     key={file.id}
                                     onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
@@ -209,8 +251,8 @@ export default function TranscriptionsPage() {
                                             className="peer hidden"
                                         />
                                         <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
-                                peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
-                                flex items-center justify-center transition-colors">
+                      peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
+                      flex items-center justify-center transition-colors">
                                             <svg
                                                 className="hidden peer-checked:block h-3 w-3 text-white"
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -235,7 +277,6 @@ export default function TranscriptionsPage() {
                                     {/* Duration */}
                                     <span className="text-zinc-300">{formatDuration(file.duration)}</span>
                                 </div>
-
                             ))
                         ) : (
                             <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
@@ -244,20 +285,17 @@ export default function TranscriptionsPage() {
                                 </p>
                             </div>
                         )}
-
                     </CardContent>
-
                 </Card>
             </Reveal>
+
+            {/* Banner flotante con eliminar */}
             {selected.length > 0 && (
                 <div className="fixed bottom-4 left-0 right-0 flex justify-center px-4">
                     <div className="flex w-full max-w-sm items-center justify-between rounded-xl border border-white/10 bg-zinc-900 px-4 py-2">
-                        {/* Texto con contador */}
                         <p className="text-sm text-zinc-200">
                             Selected files: {selected.length}
                         </p>
-
-                        {/* Botón eliminar solo con ícono */}
                         <button
                             onClick={() => setShowConfirm(true)}
                             className="flex items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20 transition-colors"
@@ -268,22 +306,18 @@ export default function TranscriptionsPage() {
                 </div>
             )}
 
-
             {/* Modal de confirmación */}
             {showConfirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                    {/* Fondo */}
                     <div
                         className="absolute inset-0 bg-black/60"
                         onClick={() => setShowConfirm(false)}
                     />
-                    {/* Contenido */}
                     <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-lg">
                         <h2 className="text-lg font-medium text-zinc-200">Confirm delete</h2>
                         <p className="mt-2 text-sm text-zinc-400">
                             Are you sure you want to delete {selected.length} file{selected.length > 1 ? "s" : ""}? This action cannot be undone.
                         </p>
-
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowConfirm(false)}
@@ -301,7 +335,6 @@ export default function TranscriptionsPage() {
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
