@@ -82,7 +82,7 @@ export default function SingleTranscription() {
                 </Card>
 
                 {/*Actions + Export stacked */}
-                <div className="w-full md:w-64 flex flex-col gap-6">
+                <div className="w-full md:w-54 flex flex-col gap-6">
                     {/* Card Actions */}
                     <Card className="border-white/10 bg-white/5 backdrop-blur">
                         <CardHeader>
