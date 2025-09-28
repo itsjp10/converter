@@ -13,6 +13,22 @@ export default function SingleTranscription() {
     const [isCopied, setIsCopied] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [error, setError] = useState(null);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                const res = await fetch("/api/user");
+                if (!res.ok) throw new Error(`User fetch failed: ${res.status}`);
+                const data = await res.json();
+                setUser(data.user);
+            } catch (err) {
+                setError(err.message);
+                setIsLoading(false);
+            }
+        };
+        getUser();
+    }, []);
 
     useEffect(() => {
         async function fetchTranscription() {
@@ -88,6 +104,8 @@ export default function SingleTranscription() {
 
     }
 
+    if(!user) return <Loading />;
+
     if (!transcription && !error) return <Loading />;
 
     if (error) {
@@ -140,7 +158,7 @@ export default function SingleTranscription() {
                             <CardContent className="flex flex-col gap-4">
                                 <div className="flex items-center gap-2 text-sm text-zinc-400">
                                     <Clock className="h-4 w-4 text-indigo-400" />
-                                    <span>10 minutes</span>
+                                    <span>{user.credits} minutes</span>
                                 </div>
                                 <button className="flex items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20 transition-colors hover:cursor-pointer">
                                     <Crown className="h-4 w-4" />

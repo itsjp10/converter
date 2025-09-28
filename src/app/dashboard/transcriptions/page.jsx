@@ -51,7 +51,6 @@ export default function TranscriptionsPage() {
         f.title.toLowerCase().includes(search.toLowerCase())
     );
 
-    // 🔹 Fetch user
     useEffect(() => {
         const getUser = async () => {
             try {
@@ -67,7 +66,6 @@ export default function TranscriptionsPage() {
         getUser();
     }, []);
 
-    // 🔹 Fetch transcriptions
     useEffect(() => {
         if (!user) {
             setIsLoading(false);
@@ -117,7 +115,6 @@ export default function TranscriptionsPage() {
         }
     }
 
-    // 🔹 Acción borrar
     const handleDelete = async () => {
         await fetch("/api/transcriptions", {
             method: "DELETE",
@@ -129,10 +126,8 @@ export default function TranscriptionsPage() {
         setShowConfirm(false);
     };
 
-    // 🔹 Loading
     if (isLoading) return <Loading />;
 
-    // 🔹 Error personalizado
     if (error) {
         const is401 = error.includes("401");
         const is404 = error.includes("404");
