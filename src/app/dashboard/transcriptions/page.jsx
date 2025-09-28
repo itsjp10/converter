@@ -82,6 +82,44 @@ export default function TranscriptionsPage() {
         getTranscriptions();
     }, [user]);
 
+    function formatDate(isoString) {
+        const date = new Date(isoString);
+
+        const dateOptions = {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+        };
+
+        const timeOptions = {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false, // 24h
+        };
+
+        const formattedDate = date.toLocaleDateString("en-GB", dateOptions);
+        const formattedTime = date.toLocaleTimeString("en-GB", timeOptions);
+
+        return `${formattedDate}, ${formattedTime}`;
+    }
+
+    function formatDuration(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        if (minutes > 0) {
+            // minutos con 2 dígitos, pero 00 en segundos
+            if (seconds == 0) {
+                return `${String(minutes).padStart(2, "0")} min`;
+            }
+            // minutos con 2 dígitos, segundos con 2 dígitos
+            return `${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(2, "0")} sec`;
+        } else {
+            // solo segundos, con 2 dígitos
+            return `${String(seconds).padStart(2, "0")} sec`;
+        }
+    }
+
     const handleDelete = async () => {
         await fetch("/api/transcriptions", {
             method: "DELETE",
@@ -185,10 +223,10 @@ export default function TranscriptionsPage() {
                                     </div>
 
                                     {/* Uploaded */}
-                                    <span className="text-zinc-300">{file.createdAt}</span>
+                                    <span className="text-zinc-300">{formatDate(file.createdAt)}</span>
 
                                     {/* Duration */}
-                                    <span className="text-zinc-300">{file.duration}</span>
+                                    <span className="text-zinc-300">{formatDuration(file.duration)}</span>
                                 </div>
 
                             ))

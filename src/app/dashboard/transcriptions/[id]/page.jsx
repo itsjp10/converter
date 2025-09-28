@@ -18,6 +18,38 @@ export default function SingleTranscription() {
         fetchTranscription();
     }, [id]);
 
+    function formatDate(isoString) {
+        const date = new Date(isoString);
+
+        const dateOptions = {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+        };
+
+        const formattedDate = date.toLocaleDateString("en-GB", dateOptions);
+
+        return `${formattedDate}`;
+    }
+
+    function formatDuration(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        if (minutes > 0) {
+            // minutos con 2 dígitos, pero 00 en segundos
+            if (seconds == 0) {
+                return `${String(minutes).padStart(2, "0")} min`;
+            }
+            // minutos con 2 dígitos, segundos con 2 dígitos
+            return `${String(minutes).padStart(2, "0")} min ${String(seconds).padStart(2, "0")} sec`;
+        } else {
+            // solo segundos, con 2 dígitos
+            return `${String(seconds).padStart(2, "0")} sec`;
+        }
+    }
+
+
     if (!transcription) return <p className="text-zinc-400">Loading...</p>;
 
     return (
@@ -28,8 +60,8 @@ export default function SingleTranscription() {
                         {transcription.title}
                     </CardTitle>
                     <div className="mt-2 flex gap-6 text-sm text-zinc-400">
-                        <span>{transcription.createdAt}</span>
-                        <span>{transcription.duration}</span>
+                        <span>{formatDate(transcription.createdAt)}</span>
+                        <span>{formatDuration(transcription.duration)}</span>
                     </div>
                 </CardHeader>
 
