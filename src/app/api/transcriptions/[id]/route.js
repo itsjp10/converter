@@ -6,13 +6,10 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req, { params }) {
     const { id } = await params;
     try {
-        const transcriptions = await prisma.transcription.findMany({
-            where: {
-                userId: id,
-            },
-            orderBy: { createdAt: "desc" }
+        const transcription = await prisma.transcription.findUnique({
+            where: { id }
         })
-        return NextResponse.json(transcriptions);
+        return NextResponse.json(transcription);
     } catch (error) {
         return NextResponse.json({ error: "Error fetching transcriptions" }, { status: 500 })
     }

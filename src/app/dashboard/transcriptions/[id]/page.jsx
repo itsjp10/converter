@@ -10,17 +10,12 @@ export default function SingleTranscription() {
     const [transcription, setTranscription] = useState(null);
 
     useEffect(() => {
-        // 🔹 Simulación de fetch (cámbialo por /api/transcriptions/${id})
-        const fakeData = {
-            id,
-            title: "WhatsApp Ptt 2025-09-17 at 11.32.02 AM.ogg",
-            createdAt: "20 September 2025",
-            duration: "04 min 57 sec",
-            content: `to part of a lecture in an art history class. The class has been studying the history of Western European art. 
-            OK, let’s get started. In the last class, we were talking about a period of art that’s also a style of art in Italy,
-            a style called the High Renaissance...`,
-        };
-        setTranscription(fakeData);
+        async function fetchTranscription() {
+            const res = await fetch(`/api/transcriptions/${id}`);
+            const data = await res.json();
+            setTranscription(data);
+        }
+        fetchTranscription();
     }, [id]);
 
     if (!transcription) return <p className="text-zinc-400">Loading...</p>;

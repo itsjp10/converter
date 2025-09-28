@@ -70,7 +70,7 @@ export default function TranscriptionsPage() {
         const getTranscriptions = async () => {
             try {
                 if (!user) return;
-                const res = await fetch("/api/transcriptions/" + user.id);
+                const res = await fetch(`/api/transcriptions?userId=${user.id}`);
                 if (!res.ok) throw new Error("Error fetching transcriptions");
                 const data = await res.json();
                 setFiles(data);
