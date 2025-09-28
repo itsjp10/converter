@@ -9,6 +9,9 @@ export async function GET(req, { params }) {
         const transcription = await prisma.transcription.findUnique({
             where: { id }
         })
+        if (!transcription) {
+            return NextResponse.json({ error: "Transcription not found" }, { status: 404 });
+        }
         return NextResponse.json(transcription);
     } catch (error) {
         return NextResponse.json({ error: "Error fetching transcription" }, { status: 500 })

@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType, FileSpreadsheet, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Loading from "./loading";
 
 export default function SingleTranscription() {
     const { id } = useParams();
@@ -11,12 +12,28 @@ export default function SingleTranscription() {
     const [transcription, setTranscription] = useState(null);
     const [isCopied, setIsCopied] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         async function fetchTranscription() {
-            const res = await fetch(`/api/transcriptions/${id}`);
-            const data = await res.json();
-            setTranscription(data);
+            try {
+                const res = await fetch(`/api/transcriptions/${id}`);
+                if (res.status === 404) {
+                    setError("Transcription not found");
+                    return;
+                }
+                if (!res.ok) {
+                    setError("Error fetching transcription");
+                    return;
+                }
+                const data = await res.json();
+                // Simulación de delay para ver skeleton
+                //setTimeout(() => setTranscription(data), 10000);
+                setTranscription(data)
+            } catch (err) {
+                console.error(err);
+                setError("Error fetching transcription");
+            }
         }
         fetchTranscription();
     }, [id]);
@@ -71,8 +88,30 @@ export default function SingleTranscription() {
 
     }
 
+    if (!transcription && !error) return <Loading />;
 
-    if (!transcription) return <p className="text-zinc-400">Loading...</p>;
+    if (error) {
+        return (
+            <div className="flex w-full justify-center px-4 py-12">
+                <Card className="max-w-md w-full border-white/10 bg-white/5 backdrop-blur p-6 text-center">
+                    <CardTitle className="text-red-400 text-lg mb-2">{error}</CardTitle>
+                    <p className="text-sm text-zinc-400">
+                        The transcription you are looking for does not exist or may have been deleted.
+                    </p>
+                    <div className="mt-6 flex justify-center">
+                        <button
+                            onClick={() => router.push("/dashboard/transcriptions")}
+                            className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                        </button>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
 
     return (
         <div className="flex w-full justify-center px-4 py-8">
