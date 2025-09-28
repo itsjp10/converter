@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Copy, Trash2, Calendar, FileText, FileType, FileSpreadsheet } from "lucide-react";
+import { Copy, Trash2, Calendar, Clock3, FileText, FileType, FileSpreadsheet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SingleTranscription() {
@@ -59,17 +59,23 @@ export default function SingleTranscription() {
                 <Card className="flex-1 border-white/10 bg-white/5 backdrop-blur">
                     <CardHeader className="gap-0.5">
                         <div className="mt-2 flex gap-6 text-sm text-zinc-400">
-                            <span>{formatDate(transcription.createdAt)}</span>
-                            <span>{formatDuration(transcription.duration)}</span>
+                            <span className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                {formatDate(transcription.createdAt)}
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <Clock3 className="h-4 w-4" />
+                                {formatDuration(transcription.duration)}
+                            </span>
                         </div>
-                        <CardTitle className="text-zinc-200 text-2xl">
+                        <CardTitle className="text-zinc-200 text-xl">
                             {transcription.title}
                         </CardTitle>
                     </CardHeader>
 
                     {/*separator*/}
                     <CardContent>
-                        <div className="border-t border-white/10 w-full"/>
+                        <div className="border-t border-white/10 w-full" />
                     </CardContent>
 
                     <CardContent className="flex flex-col gap-8">
