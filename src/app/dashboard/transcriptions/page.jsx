@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { FileAudio2, Search, Trash2 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+
 /* Animación reveal */
 function Reveal({ children, delay = 0, y = 16 }) {
     return (
@@ -25,6 +27,8 @@ export default function TranscriptionsPage() {
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState([]);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    const router = useRouter();
 
     const toggleAll = (checked) => {
         if (checked) {
@@ -115,6 +119,7 @@ export default function TranscriptionsPage() {
                                 <input
                                     type="checkbox"
                                     checked={selected.length === files.length && files.length > 0}
+                                    onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => toggleAll(e.target.checked)}
                                     className="peer hidden"
                                 />
@@ -141,13 +146,17 @@ export default function TranscriptionsPage() {
                         {/* Lista */}
                         {filteredFiles.length > 0 ? (
                             filteredFiles.map((file) => (
+
                                 <div
                                     key={file.id}
+                                    onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
                                     className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
-                                    
                                 >
                                     {/* Checkbox */}
-                                    <label className="flex items-center justify-center cursor-pointer">
+                                    <label
+                                        className="flex items-center justify-center cursor-pointer"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={selected.includes(file.id)}
@@ -181,6 +190,7 @@ export default function TranscriptionsPage() {
                                     {/* Duration */}
                                     <span className="text-zinc-300">{file.duration}</span>
                                 </div>
+
                             ))
                         ) : (
                             <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
