@@ -11,6 +11,18 @@ export async function GET(req, { params }) {
         })
         return NextResponse.json(transcription);
     } catch (error) {
-        return NextResponse.json({ error: "Error fetching transcriptions" }, { status: 500 })
+        return NextResponse.json({ error: "Error fetching transcription" }, { status: 500 })
+    }
+}
+
+export async function DELETE(req, { params }) {
+    const { id } = await params;
+    try {
+        const transcription = await prisma.transcription.delete({
+            where: { id }
+        })
+        return NextResponse.json(transcription);
+    } catch (error) {
+        return NextResponse.json({ error: "Error deleting transcription" }, { status: 500 })
     }
 }
