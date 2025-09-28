@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { FileAudio2, Search, Trash2 } from "lucide-react";
+import Loading from "./loading";
+
 
 import { useRouter } from "next/navigation";
 
@@ -27,6 +29,8 @@ export default function TranscriptionsPage() {
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState([]);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
 
     const router = useRouter();
 
@@ -74,8 +78,11 @@ export default function TranscriptionsPage() {
                 if (!res.ok) throw new Error("Error fetching transcriptions");
                 const data = await res.json();
                 setFiles(data);
+
             } catch (err) {
                 console.error(err);
+            } finally {
+                setIsLoading(false);
             }
         };
 
@@ -131,7 +138,7 @@ export default function TranscriptionsPage() {
         setShowConfirm(false);
     }
 
-    if (!user) return <p>Loading...</p>;
+    if (!user || isLoading) return <Loading />;
 
     return (
         <div className="flex w-full justify-center px-4 py-8">
