@@ -56,130 +56,131 @@ export default function SingleTranscription() {
 
     return (
         <div className="flex w-full justify-center px-4 py-8">
-            <div className="grid w-full max-w-6xl grid-cols-[auto_1fr_auto] gap-6 items-start">
-
-                {/* Columna 1: Back + Minute balance */}
-                <div className="flex flex-col gap-4">
-                    {/* Back button */}
+            <div className="w-full max-w-6xl flex flex-col gap-6">
+                {/* Fila 1: Back */}
+                <div>
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+                        className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors hover:cursor-pointer"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Back
                     </button>
-
-                    {/* Minute balance card */}
-                    <Card className="w-56 border border-white/10 bg-white/5 backdrop-blur gap-1">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-zinc-200">
-                                Minute balance
-                            </CardTitle>
-                        </CardHeader>
-
-                        <CardContent className="flex flex-col gap-4">
-                            {/* Balance */}
-                            <div className="flex items-center gap-2 text-sm text-zinc-400">
-                                <Clock className="h-4 w-4 text-indigo-400" />
-                                <span>10 minutes</span>
-                            </div>
-
-                            {/* Subscribe button */}
-                            <button className="flex items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20 transition-colors">
-                                <Crown className="h-4 w-4" />
-                                Subscribe
-                            </button>
-                        </CardContent>
-                    </Card>
                 </div>
 
+                {/* Fila 2: grid de 3 columnas */}
+                <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-start">
+                    {/* Columna 1: Subscribe (solo en md+) */}
+                    <div className="hidden lg:block">
+                        <Card className="w-56 border border-white/10 bg-white/5 backdrop-blur gap-1">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-semibold text-zinc-200">
+                                    Minute balance
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4">
+                                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                                    <Clock className="h-4 w-4 text-indigo-400" />
+                                    <span>10 minutes</span>
+                                </div>
+                                <button className="flex items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20 transition-colors hover:cursor-pointer">
+                                    <Crown className="h-4 w-4" />
+                                    Subscribe
+                                </button>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                {/* Columna 2: Main card */}
-                <Card className="border-white/10 bg-white/5 backdrop-blur">
-                    <CardHeader className="gap-0.5">
-                        <div className="mt-2 flex gap-6 text-sm text-zinc-400">
-                            <span className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                {formatDate(transcription.createdAt)}
-                            </span>
-                            <span className="flex items-center gap-2">
-                                <Clock3 className="h-4 w-4" />
-                                {formatDuration(transcription.duration)}
-                            </span>
-                        </div>
-                        <CardTitle className="text-zinc-200 text-xl">
-                            {transcription.title}
-                        </CardTitle>
-                    </CardHeader>
-
-                    <CardContent>
-                        <div className="border-t border-white/10 w-full" />
-                    </CardContent>
-
-                    <CardContent className="flex flex-col gap-8">
-                        <div className="flex-1 space-y-4">
+                    {/* Columna 2: Main */}
+                    <Card className="border-white/10 bg-white/5 backdrop-blur">
+                        <CardHeader className="gap-0.5">
+                            <div className="mt-2 flex flex-wrap gap-6 text-sm text-zinc-400">
+                                <span className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    {formatDate(transcription.createdAt)}
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <Clock3 className="h-4 w-4" />
+                                    {formatDuration(transcription.duration)}
+                                </span>
+                            </div>
+                            <CardTitle className="text-zinc-200 text-xl">
+                                {transcription.title}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="border-t border-white/10 w-full" />
+                        </CardContent>
+                        <CardContent className="flex flex-col gap-8">
                             <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-200">
                                 {transcription.content}
                             </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Columna 3: Actions + Export */}
-                <div className="w-full md:w-56 flex flex-col gap-6">
-                    {/* Card Actions */}
-                    <Card className="border-white/10 bg-white/5 backdrop-blur gap-1">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-zinc-200">Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-3">
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(transcription.content);
-                                    setIsCopied(true);
-                                    setTimeout(() => setIsCopied(false), 2000);
-                                }}
-                                className={`flex w-full items-center gap-2 rounded-md border ${isCopied
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40"
-                                    : "bg-white/5 text-zinc-200 hover:bg-white/10 border-white/20"
-                                    } px-3 py-2 text-sm transition-colors`}
-                            >
-                                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                {isCopied ? "Copied!" : "Copy"}
-                            </button>
-                            <button
-                                onClick={() => alert("Delete logic aquí")}
-                                className="flex w-full items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                            </button>
                         </CardContent>
                     </Card>
 
-                    {/* Card Export */}
-                    <Card className="border-white/10 bg-white/5 backdrop-blur gap-1">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-zinc-200">Export</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-3">
-                            <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors">
-                                <FileText className="h-4 w-4" />
-                                Download .TXT
-                            </button>
-                            <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors">
-                                <FileType className="h-4 w-4" />
-                                Download .DOCX
-                            </button>
-                            <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors">
-                                <FileSpreadsheet className="h-4 w-4" />
-                                Download .XLSX
-                            </button>
-                        </CardContent>
-                    </Card>
+                    {/* Columna 3: Actions + Export */}
+                    <div className="w-full md:w-56 flex flex-col gap-6">
+                        {/* Actions */}
+                        <Card className="border-white/10 bg-white/5 backdrop-blur gap-1">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-semibold text-zinc-200">
+                                    Actions
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(transcription.content);
+                                        setIsCopied(true);
+                                        setTimeout(() => setIsCopied(false), 2000);
+                                    }}
+                                    className={`flex w-full items-center gap-2 rounded-md border ${isCopied
+                                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40"
+                                            : "bg-white/5 text-zinc-200 hover:bg-white/10 border-white/20 hover:cursor-pointer"
+                                        } px-3 py-2 text-sm transition-colors`}
+                                >
+                                    {isCopied ? (
+                                        <Check className="h-4 w-4" />
+                                    ) : (
+                                        <Copy className="h-4 w-4" />
+                                    )}
+                                    {isCopied ? "Copied!" : "Copy"}
+                                </button>
+                                <button
+                                    onClick={() => alert("Delete logic aquí")}
+                                    className="flex w-full items-center gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors hover:cursor-pointer"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                </button>
+                            </CardContent>
+                        </Card>
+
+                        {/* Export */}
+                        <Card className="border-white/10 bg-white/5 backdrop-blur gap-1">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-semibold text-zinc-200">
+                                    Export
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                    <FileText className="h-4 w-4" />
+                                    Download .TXT
+                                </button>
+                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                    <FileType className="h-4 w-4" />
+                                    Download .DOCX
+                                </button>
+                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                    Download .XLSX
+                                </button>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
         </div>
-
     );
 }
