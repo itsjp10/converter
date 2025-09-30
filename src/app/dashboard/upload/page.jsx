@@ -1,6 +1,6 @@
 "use client";
-
 import React from "react";
+import { useEffect, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { Button, } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, } from "@/components/ui/card";
@@ -46,53 +46,46 @@ function Noise() {
     );
 }
 /* -------------------------------------------------------------- */
-async function uploadFileToAAI(file) {
-    const fd = new FormData();
-    fd.append("file", file);
-
-    const res = await fetch("/api/aai/upload", {
-        method: "POST",
-        body: fd,
-    });
-
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Upload failed");
-    }
-    const data = await res.json(); // { upload_url }
-    return data.upload_url;
-}
-
-async function transcribe(upload_url, language) {
-    const res = await fetch("/api/aai/transcribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ upload_url, language }),
-    });
-
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Transcription failed");
-    }
-    return res.json(); // { id, status, text }
-}
-
-
-
-
 
 const BYTES_ACCEPT =
     "audio/*,video/mp4,video/quicktime,video/x-matroska,video/webm";
 
 export default function UploadPage() {
-    const [files, setFiles] = React.useState([]); // [{file, url, duration}]
-    const [dragOver, setDragOver] = React.useState(false);
-    const [langOn, setLangOn] = React.useState(false);
-    const [language, setLanguage] = React.useState("auto");
-    const balanceMinutes = 75; // ejemplo: 1:15:00
+    const [user, setUser] = useState(null);
+    const [files, setFiles] = useState([]); // [{file, url, duration}]
+    const [dragOver, setDragOver] = useState(false);
+    const [langOn, setLangOn] = useState(false);
+    const [language, setLanguage] = useState("auto");
+    const [balanceMinutes, setBalanceMinutes] = useState(0);
 
-    const [results, setResults] = React.useState([]); // [{name, text, id}]
-    const [loading, setLoading] = React.useState(false);
+    const [results, setResults] = useState([]); // [{name, text, id}]
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                const res = await fetch("/api/user");
+                if (!res.ok) throw new Error(`User fetch failed: ${res.status}`);
+                const data = await res.json();
+                setUser(data.user);
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+        getUser();
+    }, []);
+
+    useEffect(() => {
+        const getBalance = () => {
+            if (!user) return;
+            try {
+                setBalanceMinutes(user.credits);                
+            } catch (error) {
+                throw new Error("Failed to load credits from user")
+            }
+        }
+        getBalance()
+    }, [user]);
 
 
     // Cargar duración real de cada audio/video
