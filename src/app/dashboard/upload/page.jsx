@@ -378,7 +378,7 @@ export default function UploadPage() {
                                                         body: JSON.stringify({
                                                             content: data.text,
                                                             title: file.name,
-                                                            duration: 120,
+                                                            duration: totalSeconds,
                                                             language: language,
                                                         }),
                                                     });
@@ -397,8 +397,6 @@ export default function UploadPage() {
                                             console.error(e);
                                             alert(e.message || "Unexpected error");
                                         } finally {
-                                            // ojo: no pongas setLoading(false) aquí si usas polling;
-                                            // lo manejo dentro de poll() para no cortar antes de tiempo.
                                         }
                                     }}
 

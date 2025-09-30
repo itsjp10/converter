@@ -2,19 +2,22 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType, FileSpreadsheet, ArrowLeft, LogIn } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Loading from "./loading";
 
 export default function SingleTranscription() {
     const { id } = useParams();
     const router = useRouter();
+
     const [transcription, setTranscription] = useState(null);
     const [isCopied, setIsCopied] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
+    //fetching the user
     useEffect(() => {
         const getUser = async () => {
             try {
@@ -24,6 +27,7 @@ export default function SingleTranscription() {
                 setUser(data.user);
             } catch (err) {
                 setError(err.message);
+            } finally {
                 setIsLoading(false);
             }
         };
@@ -35,11 +39,15 @@ export default function SingleTranscription() {
             try {
                 const res = await fetch(`/api/transcriptions/${id}`);
                 if (res.status === 404) {
-                    setError("Transcription not found");
+                    setError("404: Transcription not found");
+                    return;
+                }
+                if (res.status === 401) {
+                    setError("401: Unauthorized");
                     return;
                 }
                 if (!res.ok) {
-                    setError("Error fetching transcription");
+                    setError("500: Error fetching transcription");
                     return;
                 }
                 const data = await res.json();
@@ -47,8 +55,7 @@ export default function SingleTranscription() {
                 //setTimeout(() => setTranscription(data), 10000);
                 setTranscription(data)
             } catch (err) {
-                console.error(err);
-                setError("Error fetching transcription");
+                setError("Network error fetching transcription");
             }
         }
         fetchTranscription();
@@ -98,13 +105,64 @@ export default function SingleTranscription() {
             // Redirige al listado de transcriptions
             router.push("/dashboard/transcriptions");
         } catch (err) {
-            console.error(err);
-            alert("Error deleting transcription");
+            setError("Error deleting transcription");
         }
 
     }
 
-    if(!user) return <Loading />;
+    // skeleton loading
+    if (isLoading && !error) return <Loading />;
+
+    // error UI
+    if (error) {
+        const is401 = error.includes("401");
+        const is404 = error.includes("404");
+
+        return (
+            <div className="flex w-full justify-center px-4 py-12">
+                <Card className="max-w-md w-full border-white/10 bg-white/5 backdrop-blur p-6 text-center">
+                    <CardTitle
+                        className={`text-lg mb-2 ${is401 ? "text-blue-400" : "text-red-400"
+                            }`}
+                    >
+                        {is401
+                            ? "You need to log in"
+                            : is404
+                                ? "Transcription not found"
+                                : "Something went wrong"}
+                    </CardTitle>
+
+                    <p className="text-sm text-zinc-400 mb-4">
+                        {is401
+                            ? "Your session has expired or you’re not logged in. Please sign in to continue."
+                            : is404
+                                ? "The transcription you are looking for does not exist or may have been deleted."
+                                : "An unexpected error occurred. Please try again later."}
+                    </p>
+
+                    <div className="flex justify-center">
+                        {is401 ? (
+                            <button
+                                onClick={() => router.push("/login")}
+                                className="inline-flex items-center gap-2 rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-300 hover:bg-blue-500/20 transition-colors"
+                            >
+                                <LogIn className="h-4 w-4" />
+                                Go to Login
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => router.push("/dashboard/transcriptions")}
+                                className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back
+                            </button>
+                        )}
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     if (!transcription && !error) return <Loading />;
 

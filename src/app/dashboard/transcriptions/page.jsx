@@ -133,7 +133,7 @@ export default function TranscriptionsPage() {
         const is404 = error.includes("404");
 
         return (
-            <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="flex w-full justify-center px-4 py-12">
                 <Card className="max-w-md border-white/10 bg-white/5 backdrop-blur p-6 text-center">
                     <CardTitle
                         className={`text-lg mb-2 ${is401 ? "text-blue-400" : "text-red-400"}`}
@@ -178,7 +178,7 @@ export default function TranscriptionsPage() {
         );
     }
 
-    // 🔹 UI principal
+    // UI principal
     return (
         <div className="flex w-full justify-center px-4 py-8">
             <Reveal>
