@@ -61,6 +61,8 @@ export default function UploadPage() {
     const [results, setResults] = useState([]); // [{name, text, id}]
     const [loading, setLoading] = useState(false);
 
+    const [duration, setDuration] = useState(0)
+
     useEffect(() => {
         const getUser = async () => {
             try {
@@ -99,7 +101,7 @@ export default function UploadPage() {
             media.preload = "metadata";
             media.src = url;
             media.onloadedmetadata = () => {
-                const duration = Number.isFinite(media.duration) ? media.duration : 0;
+                setDuration(Number.isFinite(media.duration) ? media.duration : 0);
                 setFiles((prev) => [...prev, { file, url, duration }]);
                 URL.revokeObjectURL(media.src);
             };
@@ -129,8 +131,7 @@ export default function UploadPage() {
         return `0:${mm}:${ss}`;
     };
 
-    const totalSeconds = files.reduce((a, f) => a + (f.duration || 0), 0);
-    const totalFmt = formatTime(totalSeconds);
+    const totalFmt = formatTime(duration);
 
     return (
         <div className="w-full min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
@@ -213,7 +214,7 @@ export default function UploadPage() {
                                                 </p>
                                                 <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-400">
                                                     <Clock className="size-3" />
-                                                    <span>{formatTime(f.duration)}</span>
+                                                    <span>{formatTime(duration)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -301,7 +302,8 @@ export default function UploadPage() {
                             <div className="pt-2">
                                 <Button
                                     disabled={files.length === 0}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className={`w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 
+                                        ${(files.length === 0 || balanceMinutes <= Math.floor(duration / 60)) ? "cursor-not-allowed" : "cursor-pointer"}`}
                                     onClick={async () => {
                                         try {
                                             setLoading(true);
