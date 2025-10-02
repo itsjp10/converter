@@ -107,7 +107,7 @@ export default function LandingPage() {
               <Reveal delay={0.18}>
                 <div className="mx-auto mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Button size="lg" className="bg-blue-500 hover:bg-blue-600" asChild>
-                    <Link href="/upload" className="">
+                    <Link href="/dashboard/upload" className="">
                       <Upload className="mr-2 size-4" /> Upload audio
                     </Link>
                   </Button>

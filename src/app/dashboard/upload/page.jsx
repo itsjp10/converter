@@ -81,7 +81,7 @@ export default function UploadPage() {
         const getBalance = () => {
             if (!user) return;
             try {
-                setBalanceMinutes(user.credits);                
+                setBalanceMinutes(user.credits);
             } catch (error) {
                 throw new Error("Failed to load credits from user")
             }
@@ -373,11 +373,33 @@ export default function UploadPage() {
                                                         body: JSON.stringify({
                                                             content: data.text,
                                                             title: file.name,
-                                                            duration: totalSeconds,
+                                                            duration: duration,
                                                             language: language,
                                                         }),
                                                     });
                                                     console.log(newTranscription)
+
+                                                    //update balance here
+                                                    const response = await fetch("/api/user/updateBalance", {
+                                                        method: "POST",
+                                                        headers: {
+                                                            "Content-Type": "application/json",
+                                                        },
+                                                        body: JSON.stringify({
+                                                            duration: duration
+                                                        })
+                                                    })
+                                                    console.log("this is response: ",response)
+                                                    if (!response.ok) {
+                                                        const data = await response.json();                                                        
+                                                        if (data && data.credits !== undefined) {
+                                                            setBalanceMinutes(data.credits);
+                                                        } else {
+                                                            console.error("Error: No credits in response");
+                                                        }
+                                                    } else {
+                                                        console.error("Error updating balance", response.status);
+                                                    }
                                                     return;
                                                 }
                                                 if (data.status === "error") {
@@ -394,9 +416,6 @@ export default function UploadPage() {
                                         } finally {
                                         }
                                     }}
-
-
-
                                 >
                                     Convert to text
                                 </Button>
