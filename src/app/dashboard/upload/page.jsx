@@ -389,8 +389,7 @@ export default function UploadPage() {
                                                             duration: duration
                                                         })
                                                     })
-                                                    console.log("this is response: ",response)
-                                                    if (!response.ok) {
+                                                    if (response.status === 200) {
                                                         const data = await response.json();                                                        
                                                         if (data && data.credits !== undefined) {
                                                             setBalanceMinutes(data.credits);

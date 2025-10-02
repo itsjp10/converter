@@ -27,17 +27,18 @@ export async function POST(req) {
 
         console.log("this is newBalance", newBalance)
 
+
         if (newBalance < 0) return NextResponse.json({error: "Insufficient balance"}, {status: 400})
 
         const updatedBalance = await prisma.user.update({
             where: {
-                id: userId
+                clerkId: userId
             },
             data: {
                 credits: newBalance
             }
         })
-        return NextResponse.json(updatedBalance)
+        return NextResponse.json(updatedBalance, {status: 200})
 
     } catch (error) {
         return NextResponse.json({error: "Server internal error"}, {status: 500})
