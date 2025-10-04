@@ -71,7 +71,7 @@ export default function UploadPage() {
                 const data = await res.json();
                 setUser(data.user);
             } catch (err) {
-                setError(err.message);
+                throw new Error(`No user logged in: ${err.message}`);
             }
         };
         getUser();
