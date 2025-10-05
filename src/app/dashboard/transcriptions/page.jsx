@@ -174,7 +174,7 @@ export default function TranscriptionsPage() {
     // UI principal
     return (
         <div className="flex w-full justify-center px-4 py-8">
-            <Card className="w-full max-w-4xl border-white/10 bg-white/5 backdrop-blur">
+            <Card className="w-full max-w-4xl border-white/10 bg-white/5 backdrop-blur overflow-visible">
                 <CardHeader>
                     <CardTitle className="text-zinc-200 text-lg">All files</CardTitle>
                     <div className="relative mt-3">
@@ -188,7 +188,7 @@ export default function TranscriptionsPage() {
                         />
                     </div>
                 </CardHeader>
-                <CardContent className="min-h-[200px]">
+                <CardContent className="min-h-[200px] overflow-visible">
                     {/* Encabezado */}
                     <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
                         <label className="flex items-center justify-center cursor-pointer">
@@ -274,7 +274,7 @@ export default function TranscriptionsPage() {
                     )}
 
                     {/* Pagination controls */}
-                    {totalPages > 1 && (
+                    {totalPages && (
                         <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3">
                             {/* Left side: page info */}
                             <div className="text-sm text-zinc-400">
@@ -317,8 +317,8 @@ export default function TranscriptionsPage() {
                                                 <button
                                                     onClick={() => setPage(p)}
                                                     className={`px-3 py-1 rounded text-sm transition-colors ${page === p
-                                                            ? "bg-blue-500/30 text-blue-200 border border-blue-400/30"
-                                                            : "bg-white/5 text-zinc-300 hover:bg-white/10"
+                                                        ? "bg-blue-500/30 text-blue-200 border border-blue-400/30"
+                                                        : "bg-white/5 text-zinc-300 hover:bg-white/10"
                                                         }`}
                                                 >
                                                     {p}
@@ -347,8 +347,8 @@ export default function TranscriptionsPage() {
                             </div>
 
                             {/* Right side: limit selector */}
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="limit" className="text-sm text-zinc-400">
+                            <div className="relative z-20 flex items-center gap-2">
+                                <label htmlFor="limit" className="text-sm text-zinc-400 whitespace-nowrap">
                                     Rows per page:
                                 </label>
                                 <select
@@ -358,10 +358,16 @@ export default function TranscriptionsPage() {
                                         setLimit(Number(e.target.value));
                                         setPage(1);
                                     }}
-                                    className="px-2 py-1 rounded-md bg-white/10 text-zinc-200 border border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="px-2 py-1 rounded-md bg-zinc-800/80 text-zinc-200 border border-white/10 
+                   focus:outline-none focus:ring-1 focus:ring-blue-500 
+                   backdrop-blur supports-[backdrop-filter]:bg-zinc-800/70"
+                                    style={{
+                                        position: "relative",
+                                        zIndex: 50,
+                                    }}
                                 >
                                     {[10, 20, 50].map((opt) => (
-                                        <option key={opt} value={opt}>
+                                        <option key={opt} value={opt} className="bg-zinc-800 text-zinc-200">
                                             {opt}
                                         </option>
                                     ))}
