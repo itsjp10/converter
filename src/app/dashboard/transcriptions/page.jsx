@@ -1,24 +1,11 @@
 'use client'
 // src/app/dashboard/transcriptions/page.jsx
+import React from "react";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
 import { FileAudio2, Search, Trash2, ArrowLeft, LogIn } from "lucide-react";
 import Loading from "./loading";
 import { useRouter } from "next/navigation";
-
-/* Animación reveal */
-function Reveal({ children, delay = 0, y = 16 }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut", delay }}
-        >
-            {children}
-        </motion.div>
-    );
-}
 
 export default function TranscriptionsPage() {
     const [user, setUser] = useState(null);
@@ -28,6 +15,10 @@ export default function TranscriptionsPage() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
 
     const router = useRouter();
 
@@ -75,11 +66,13 @@ export default function TranscriptionsPage() {
         const getTranscriptions = async () => {
             try {
                 setIsLoading(true);
-                const res = await fetch(`/api/transcriptions?userId=${user.id}`);
+                const res = await fetch(`/api/transcriptions?userId=${user.id}&page=${page}&limit=${limit}`);
                 if (!res.ok)
                     throw new Error(`Transcriptions fetch failed: ${res.status}`);
                 const data = await res.json();
-                setFiles(data);
+                setFiles(data.transcriptions);
+                setTotalPages(data.totalPages);
+                setTotal(data.total);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -88,7 +81,7 @@ export default function TranscriptionsPage() {
         };
 
         getTranscriptions();
-    }, [user]);
+    }, [user, page, limit]);
 
     function formatDate(isoString) {
         const date = new Date(isoString);
@@ -181,108 +174,205 @@ export default function TranscriptionsPage() {
     // UI principal
     return (
         <div className="flex w-full justify-center px-4 py-8">
-            <Reveal>
-                <Card className="w-full max-w-4xl border-white/10 bg-white/5 backdrop-blur">
-                    <CardHeader>
-                        <CardTitle className="text-zinc-200 text-lg">All files</CardTitle>
-                        <div className="relative mt-3">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+            <Card className="w-full max-w-4xl border-white/10 bg-white/5 backdrop-blur">
+                <CardHeader>
+                    <CardTitle className="text-zinc-200 text-lg">All files</CardTitle>
+                    <div className="relative mt-3">
+                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </CardHeader>
+                <CardContent className="min-h-[200px]">
+                    {/* Encabezado */}
+                    <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
+                        <label className="flex items-center justify-center cursor-pointer">
                             <input
-                                type="text"
-                                placeholder="Search..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                type="checkbox"
+                                checked={selected.length === files.length && files.length > 0}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => toggleAll(e.target.checked)}
+                                className="peer hidden"
                             />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="min-h-[200px]">
-                        {/* Encabezado */}
-                        <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
-                            <label className="flex items-center justify-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={selected.length === files.length && files.length > 0}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => toggleAll(e.target.checked)}
-                                    className="peer hidden"
-                                />
-                                <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                            <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
                   peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
                   flex items-center justify-center transition-colors">
-                                    <svg
-                                        className="hidden peer-checked:block h-3 w-3 text-white"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                            </label>
-                            <span>Name</span>
-                            <span>Uploaded</span>
-                            <span>Duration</span>
-                        </div>
-
-                        {/* Lista */}
-                        {filteredFiles.length > 0 ? (
-                            filteredFiles.map((file) => (
-                                <div
-                                    key={file.id}
-                                    onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
-                                    className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
+                                <svg
+                                    className="hidden peer-checked:block h-3 w-3 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                 >
-                                    {/* Checkbox */}
-                                    <label
-                                        className="flex items-center justify-center cursor-pointer"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={selected.includes(file.id)}
-                                            onChange={() => toggleOne(file.id)}
-                                            className="peer hidden"
-                                        />
-                                        <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </label>
+                        <span>Name</span>
+                        <span>Uploaded</span>
+                        <span>Duration</span>
+                    </div>
+
+                    {/* Lista */}
+                    {filteredFiles.length > 0 ? (
+                        filteredFiles.map((file) => (
+                            <div
+                                key={file.id}
+                                onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
+                                className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
+                            >
+                                {/* Checkbox */}
+                                <label
+                                    className="flex items-center justify-center cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selected.includes(file.id)}
+                                        onChange={() => toggleOne(file.id)}
+                                        className="peer hidden"
+                                    />
+                                    <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
                       peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
                       flex items-center justify-center transition-colors">
-                                            <svg
-                                                className="hidden peer-checked:block h-3 w-3 text-white"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                    </label>
-
-                                    {/* Name */}
-                                    <div className="flex items-center gap-2 truncate">
-                                        <FileAudio2 className="size-4 text-emerald-400 shrink-0" />
-                                        <span className="truncate text-zinc-200">{file.title}</span>
+                                        <svg
+                                            className="hidden peer-checked:block h-3 w-3 text-white"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
                                     </div>
+                                </label>
 
-                                    {/* Uploaded */}
-                                    <span className="text-zinc-300">{formatDate(file.createdAt)}</span>
-
-                                    {/* Duration */}
-                                    <span className="text-zinc-300">{formatDuration(file.duration)}</span>
+                                {/* Name */}
+                                <div className="flex items-center gap-2 truncate">
+                                    <FileAudio2 className="size-4 text-emerald-400 shrink-0" />
+                                    <span className="truncate text-zinc-200">{file.title}</span>
                                 </div>
-                            ))
-                        ) : (
-                            <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
-                                <p className="col-span-4 text-center text-sm text-zinc-400">
-                                    No files found.
-                                </p>
+
+                                {/* Uploaded */}
+                                <span className="text-zinc-300">{formatDate(file.createdAt)}</span>
+
+                                {/* Duration */}
+                                <span className="text-zinc-300">{formatDuration(file.duration)}</span>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </Reveal>
+                        ))
+                    ) : (
+                        <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
+                            <p className="col-span-4 text-center text-sm text-zinc-400">
+                                No files found.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Pagination controls */}
+                    {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3">
+                            {/* Left side: page info */}
+                            <div className="text-sm text-zinc-400">
+                                Showing{" "}
+                                <span className="text-zinc-200 font-medium">
+                                    {Math.min((page - 1) * limit + 1, total)}-
+                                    {Math.min(page * limit, total)}
+                                </span>{" "}
+                                of <span className="text-zinc-200 font-medium">{total}</span> files
+                            </div>
+
+                            {/* Center: pagination buttons */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    disabled={page === 1}
+                                    onClick={() => setPage(1)}
+                                    className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
+                                >
+                                    « First
+                                </button>
+                                <button
+                                    disabled={page === 1}
+                                    onClick={() => setPage(page - 1)}
+                                    className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
+                                >
+                                    Previous
+                                </button>
+
+                                {/* Page numbers */}
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(
+                                            (p) =>
+                                                p === 1 ||
+                                                p === totalPages ||
+                                                (p >= page - 1 && p <= page + 1)
+                                        )
+                                        .map((p, i, arr) => (
+                                            <React.Fragment key={p}>
+                                                <button
+                                                    onClick={() => setPage(p)}
+                                                    className={`px-3 py-1 rounded text-sm transition-colors ${page === p
+                                                            ? "bg-blue-500/30 text-blue-200 border border-blue-400/30"
+                                                            : "bg-white/5 text-zinc-300 hover:bg-white/10"
+                                                        }`}
+                                                >
+                                                    {p}
+                                                </button>
+                                                {arr[i + 1] && arr[i + 1] - p > 1 && (
+                                                    <span className="text-zinc-500">...</span>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                </div>
+
+                                <button
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage(page + 1)}
+                                    className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
+                                >
+                                    Next
+                                </button>
+                                <button
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage(totalPages)}
+                                    className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
+                                >
+                                    Last »
+                                </button>
+                            </div>
+
+                            {/* Right side: limit selector */}
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="limit" className="text-sm text-zinc-400">
+                                    Rows per page:
+                                </label>
+                                <select
+                                    id="limit"
+                                    value={limit}
+                                    onChange={(e) => {
+                                        setLimit(Number(e.target.value));
+                                        setPage(1);
+                                    }}
+                                    className="px-2 py-1 rounded-md bg-white/10 text-zinc-200 border border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    {[10, 20, 50].map((opt) => (
+                                        <option key={opt} value={opt}>
+                                            {opt}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                </CardContent>
+            </Card>
+
 
             {/* Banner flotante con eliminar */}
             {selected.length > 0 && (
