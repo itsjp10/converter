@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileAudio2, Search, Trash2, ArrowLeft, LogIn } from "lucide-react";
+import { FileAudio2, Search, Trash2, ArrowLeft, LogIn, Timer, Clock, Languages } from "lucide-react";
 import Loading from "./loading";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +19,7 @@ export default function TranscriptionsPage() {
     const [limit, setLimit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [stats, setStats] = useState(null);
 
     const router = useRouter();
 
@@ -57,30 +58,29 @@ export default function TranscriptionsPage() {
         getUser();
     }, []);
 
-    useEffect(() => {
-        if (!user) {
+    const loadTranscriptions = async (targetPage = page, targetLimit = limit) => {
+        if (!user) return;
+        try {
+            setIsLoading(true);
+            setError(null);
+            const res = await fetch(`/api/transcriptions?userId=${user.id}&page=${targetPage}&limit=${targetLimit}`);
+            if (!res.ok)
+                throw new Error(`Transcriptions fetch failed: ${res.status}`);
+            const data = await res.json();
+            setFiles(data.transcriptions);
+            setTotalPages(data.totalPages);
+            setTotal(data.total);
+            setStats(data.stats || null);
+        } catch (err) {
+            setError(err.message);
+        } finally {
             setIsLoading(false);
-            return;
         }
+    };
 
-        const getTranscriptions = async () => {
-            try {
-                setIsLoading(true);
-                const res = await fetch(`/api/transcriptions?userId=${user.id}&page=${page}&limit=${limit}`);
-                if (!res.ok)
-                    throw new Error(`Transcriptions fetch failed: ${res.status}`);
-                const data = await res.json();
-                setFiles(data.transcriptions);
-                setTotalPages(data.totalPages);
-                setTotal(data.total);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        getTranscriptions();
+    useEffect(() => {
+        if (!user) return;
+        loadTranscriptions();
     }, [user, page, limit]);
 
     function formatDate(isoString) {
@@ -108,16 +108,66 @@ export default function TranscriptionsPage() {
         }
     }
 
-    const handleDelete = async () => {
-        await fetch("/api/transcriptions", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: selected }),
+    function formatSummaryDuration(totalSeconds) {
+        const safeSeconds = Math.max(0, Math.round(totalSeconds || 0));
+        if (safeSeconds === 0) {
+            return "0 sec";
+        }
+        const hours = Math.floor(safeSeconds / 3600);
+        const minutes = Math.floor((safeSeconds % 3600) / 60);
+        const seconds = safeSeconds % 60;
+        const parts = [];
+        if (hours > 0) parts.push(`${hours} h`);
+        if (minutes > 0) parts.push(`${minutes} m`);
+        if (hours === 0 && minutes === 0) parts.push(`${seconds} s`);
+        return parts.join(" ");
+    }
+
+    function formatSummaryDate(isoString) {
+        if (!isoString) return "---";
+        const date = new Date(isoString);
+        return date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
         });
-        setFiles(files.filter((f) => !selected.includes(f.id)));
-        setSelected([]);
-        setShowConfirm(false);
+    }
+
+    const handleDelete = async () => {
+        if (selected.length === 0) return;
+        try {
+            setError(null);
+            const res = await fetch("/api/transcriptions", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids: selected }),
+            });
+            if (!res.ok) {
+                throw new Error(`Delete failed: ${res.status}`);
+            }
+
+            const newTotal = Math.max(0, total - selected.length);
+            const newTotalPagesRaw = Math.ceil(newTotal / limit);
+            const safeTargetPage = newTotalPagesRaw === 0 ? 1 : Math.min(page, newTotalPagesRaw);
+
+            setSelected([]);
+            setShowConfirm(false);
+
+            if (safeTargetPage !== page) {
+                setPage(safeTargetPage);
+            } else {
+                await loadTranscriptions(safeTargetPage, limit);
+            }
+        } catch (err) {
+            setError(err.message);
+        }
     };
+
+    const topLanguages = stats?.languages?.slice(0, 3) || [];
+    const totalDurationDisplay = formatSummaryDuration(stats?.totalDuration ?? 0);
+    const averageDurationDisplay = formatSummaryDuration(stats?.averageDuration ?? 0);
+    const longestDurationDisplay = formatSummaryDuration(stats?.longestDuration ?? 0);
+    const latestUploadDisplay = stats?.latestCreatedAt ? formatSummaryDate(stats.latestCreatedAt) : "---";
 
     if (isLoading) return <Loading />;
 
@@ -174,211 +224,301 @@ export default function TranscriptionsPage() {
     // UI principal
     return (
         <div className="flex w-full justify-center px-4 py-8">
-            <Card className="w-full max-w-4xl border-white/10 bg-white/5 backdrop-blur overflow-visible">
-                <CardHeader>
-                    <CardTitle className="text-zinc-200 text-lg">All files</CardTitle>
-                    <div className="relative mt-3">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+            <div className="w-full max-w-5xl space-y-6">
+                {stats && (
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <Card className="border-white/10 bg-white/5 backdrop-blur">
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-zinc-400">Total files</p>
+                                        <p className="mt-2 text-2xl font-semibold text-zinc-100">
+                                            {total.toLocaleString("en-US")}
+                                        </p>
+                                        <p className="mt-2 text-xs text-zinc-500">
+                                            Last upload: <span className="text-zinc-300">{latestUploadDisplay}</span>
+                                        </p>
+                                    </div>
+                                    <span className="rounded-full bg-emerald-500/10 p-3 text-emerald-400">
+                                        <FileAudio2 className="h-5 w-5" />
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-white/10 bg-white/5 backdrop-blur">
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-zinc-400">Transcribed time</p>
+                                        <p className="mt-2 text-2xl font-semibold text-zinc-100">{totalDurationDisplay}</p>
+                                        <p className="mt-2 text-xs text-zinc-500">Combined audio length</p>
+                                    </div>
+                                    <span className="rounded-full bg-blue-500/10 p-3 text-blue-300">
+                                        <Timer className="h-5 w-5" />
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-white/10 bg-white/5 backdrop-blur">
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-zinc-400">Average length</p>
+                                        <p className="mt-2 text-2xl font-semibold text-zinc-100">{averageDurationDisplay}</p>
+                                        <p className="mt-2 text-xs text-zinc-500">
+                                            Longest file: <span className="text-zinc-300">{longestDurationDisplay}</span>
+                                        </p>
+                                    </div>
+                                    <span className="rounded-full bg-purple-500/10 p-3 text-purple-300">
+                                        <Clock className="h-5 w-5" />
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-white/10 bg-white/5 backdrop-blur">
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="w-full">
+                                        <p className="text-xs uppercase tracking-wide text-zinc-400">Languages</p>
+                                        <p className="mt-2 text-2xl font-semibold text-zinc-100">
+                                            {stats.languageCount.toLocaleString("en-US")}
+                                        </p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {topLanguages.length > 0 ? (
+                                                topLanguages.map((language) => (
+                                                    <span
+                                                        key={language.language}
+                                                        className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-zinc-200"
+                                                    >
+                                                        {language.language}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <p className="text-xs text-zinc-500">No language data yet</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="rounded-full bg-amber-500/10 p-3 text-amber-300">
+                                        <Languages className="h-5 w-5" />
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
-                </CardHeader>
-                <CardContent className="min-h-[200px] overflow-visible">
-                    {/* Encabezado */}
-                    <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
-                        <label className="flex items-center justify-center cursor-pointer">
+                )}
+
+                <Card className="w-full border-white/10 bg-white/5 backdrop-blur overflow-visible">
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between text-zinc-200 text-lg">
+                            <span>All files</span>
+                            <span className="text-sm font-normal text-zinc-400">
+                                {total.toLocaleString("en-US")} total
+                            </span>
+                        </CardTitle>
+                        <div className="relative mt-3">
+                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
                             <input
-                                type="checkbox"
-                                checked={selected.length === files.length && files.length > 0}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => toggleAll(e.target.checked)}
-                                className="peer hidden"
+                                type="text"
+                                placeholder="Search..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                        </div>
+                    </CardHeader>
+                    <CardContent className="min-h-[200px] overflow-visible">
+                        {/* Encabezado */}
+                        <div className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-sm font-medium text-zinc-400">
+                            <label className="flex items-center justify-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selected.length === files.length && files.length > 0}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => toggleAll(e.target.checked)}
+                                    className="peer hidden"
+                                />
+                                <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
                   peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
                   flex items-center justify-center transition-colors">
-                                <svg
-                                    className="hidden peer-checked:block h-3 w-3 text-white"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                        </label>
-                        <span>Name</span>
-                        <span>Uploaded</span>
-                        <span>Duration</span>
-                    </div>
+                                    <svg
+                                        className="hidden peer-checked:block h-3 w-3 text-white"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </label>
+                            <span>Name</span>
+                            <span>Uploaded</span>
+                            <span>Duration</span>
+                        </div>
 
-                    {/* Lista */}
-                    {filteredFiles.length > 0 ? (
-                        filteredFiles.map((file) => (
-                            <div
-                                key={file.id}
-                                onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
-                                className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
-                            >
-                                {/* Checkbox */}
-                                <label
-                                    className="flex items-center justify-center cursor-pointer"
-                                    onClick={(e) => e.stopPropagation()}
+                        {/* Lista */}
+                        {filteredFiles.length > 0 ? (
+                            filteredFiles.map((file) => (
+                                <div
+                                    key={file.id}
+                                    onClick={() => router.push(`/dashboard/transcriptions/${file.id}`)}
+                                    className="grid grid-cols-[40px_2fr_1fr_1fr] gap-4 items-center border-b border-white/5 py-3 text-sm hover:bg-white/5 hover:cursor-pointer"
                                 >
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.includes(file.id)}
-                                        onChange={() => toggleOne(file.id)}
-                                        className="peer hidden"
-                                    />
-                                    <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
+                                    {/* Checkbox */}
+                                    <label
+                                        className="flex items-center justify-center cursor-pointer"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selected.includes(file.id)}
+                                            onChange={() => toggleOne(file.id)}
+                                            className="peer hidden"
+                                        />
+                                        <div className="h-4 w-4 rounded border border-white/20 bg-white/5 
                       peer-checked:bg-emerald-500 peer-checked:border-emerald-500 
                       flex items-center justify-center transition-colors">
-                                        <svg
-                                            className="hidden peer-checked:block h-3 w-3 text-white"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                        </svg>
+                                            <svg
+                                                className="hidden peer-checked:block h-3 w-3 text-white"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    </label>
+
+                                    {/* Name */}
+                                    <div className="flex items-center gap-2 truncate">
+                                        <FileAudio2 className="size-4 text-emerald-400 shrink-0" />
+                                        <span className="truncate text-zinc-200">{file.title}</span>
                                     </div>
-                                </label>
 
-                                {/* Name */}
-                                <div className="flex items-center gap-2 truncate">
-                                    <FileAudio2 className="size-4 text-emerald-400 shrink-0" />
-                                    <span className="truncate text-zinc-200">{file.title}</span>
+                                    {/* Uploaded */}
+                                    <span className="text-zinc-300">{formatDate(file.createdAt)}</span>
+
+                                    {/* Duration */}
+                                    <span className="text-zinc-300">{formatDuration(file.duration)}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
+                                <p className="col-span-4 text-center text-sm text-zinc-400">
+                                    No files found.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Pagination controls */}
+                        {totalPages && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3">
+                                {/* Left side: page info */}
+                                <div className="text-sm text-zinc-400">
+                                    Showing{" "}
+                                    <span className="text-zinc-200 font-medium">
+                                        {Math.min((page - 1) * limit + 1, total)}-
+                                        {Math.min(page * limit, total)}
+                                    </span>{" "}
+                                    of <span className="text-zinc-200 font-medium">{total}</span> files
                                 </div>
 
-                                {/* Uploaded */}
-                                <span className="text-zinc-300">{formatDate(file.createdAt)}</span>
+                                {/* Center: pagination buttons */}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        disabled={page === 1}
+                                        onClick={() => setPage(1)}
+                                        className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
+                                    >
+                                        {"<< First"}
+                                    </button>
+                                    <button
+                                        disabled={page === 1}
+                                        onClick={() => setPage(page - 1)}
+                                        className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
+                                    >
+                                        Previous
+                                    </button>
 
-                                {/* Duration */}
-                                <span className="text-zinc-300">{formatDuration(file.duration)}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="grid grid-cols-[40px_2fr_1fr_1fr] py-12">
-                            <p className="col-span-4 text-center text-sm text-zinc-400">
-                                No files found.
-                            </p>
-                        </div>
-                    )}
+                                    {/* Page numbers */}
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(
+                                                (p) =>
+                                                    p === 1 ||
+                                                    p === totalPages ||
+                                                    (p >= page - 1 && p <= page + 1)
+                                            )
+                                            .map((p, i, arr) => (
+                                                <React.Fragment key={p}>
+                                                    <button
+                                                        onClick={() => setPage(p)}
+                                                        className={`px-3 py-1 rounded text-sm transition-colors ${page === p
+                                                            ? "bg-blue-500/30 text-blue-200 border border-blue-400/30"
+                                                            : "bg-white/5 text-zinc-300 hover:bg-white/10"
+                                                            }`}
+                                                    >
+                                                        {p}
+                                                    </button>
+                                                    {arr[i + 1] && arr[i + 1] - p > 1 && (
+                                                        <span className="text-zinc-500">...</span>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                    </div>
 
-                    {/* Pagination controls */}
-                    {totalPages && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-3">
-                            {/* Left side: page info */}
-                            <div className="text-sm text-zinc-400">
-                                Showing{" "}
-                                <span className="text-zinc-200 font-medium">
-                                    {Math.min((page - 1) * limit + 1, total)}-
-                                    {Math.min(page * limit, total)}
-                                </span>{" "}
-                                of <span className="text-zinc-200 font-medium">{total}</span> files
-                            </div>
-
-                            {/* Center: pagination buttons */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    disabled={page === 1}
-                                    onClick={() => setPage(1)}
-                                    className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
-                                >
-                                    « First
-                                </button>
-                                <button
-                                    disabled={page === 1}
-                                    onClick={() => setPage(page - 1)}
-                                    className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
-                                >
-                                    Previous
-                                </button>
-
-                                {/* Page numbers */}
-                                <div className="flex items-center gap-1">
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                        .filter(
-                                            (p) =>
-                                                p === 1 ||
-                                                p === totalPages ||
-                                                (p >= page - 1 && p <= page + 1)
-                                        )
-                                        .map((p, i, arr) => (
-                                            <React.Fragment key={p}>
-                                                <button
-                                                    onClick={() => setPage(p)}
-                                                    className={`px-3 py-1 rounded text-sm transition-colors ${page === p
-                                                        ? "bg-blue-500/30 text-blue-200 border border-blue-400/30"
-                                                        : "bg-white/5 text-zinc-300 hover:bg-white/10"
-                                                        }`}
-                                                >
-                                                    {p}
-                                                </button>
-                                                {arr[i + 1] && arr[i + 1] - p > 1 && (
-                                                    <span className="text-zinc-500">...</span>
-                                                )}
-                                            </React.Fragment>
-                                        ))}
+                                    <button
+                                        disabled={page === totalPages}
+                                        onClick={() => setPage(page + 1)}
+                                        className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
+                                    >
+                                        Next
+                                    </button>
+                                    <button
+                                        disabled={page === totalPages}
+                                        onClick={() => setPage(totalPages)}
+                                        className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
+                                    >
+                                        {"Last >>"}
+                                    </button>
                                 </div>
 
-                                <button
-                                    disabled={page === totalPages}
-                                    onClick={() => setPage(page + 1)}
-                                    className="px-3 py-1 rounded bg-white/10 text-zinc-200 hover:bg-white/20 disabled:opacity-40"
-                                >
-                                    Next
-                                </button>
-                                <button
-                                    disabled={page === totalPages}
-                                    onClick={() => setPage(totalPages)}
-                                    className="px-2 py-1 rounded bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-40"
-                                >
-                                    Last »
-                                </button>
-                            </div>
-
-                            {/* Right side: limit selector */}
-                            <div className="relative z-20 flex items-center gap-2">
-                                <label htmlFor="limit" className="text-sm text-zinc-400 whitespace-nowrap">
-                                    Rows per page:
-                                </label>
-                                <select
-                                    id="limit"
-                                    value={limit}
-                                    onChange={(e) => {
-                                        setLimit(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                    className="px-2 py-1 rounded-md bg-zinc-800/80 text-zinc-200 border border-white/10 
+                                {/* Right side: limit selector */}
+                                <div className="relative z-20 flex items-center gap-2">
+                                    <label htmlFor="limit" className="text-sm text-zinc-400 whitespace-nowrap">
+                                        Rows per page:
+                                    </label>
+                                    <select
+                                        id="limit"
+                                        value={limit}
+                                        onChange={(e) => {
+                                            setLimit(Number(e.target.value));
+                                            setPage(1);
+                                        }}
+                                        className="px-2 py-1 rounded-md bg-zinc-800/80 text-zinc-200 border border-white/10 
                    focus:outline-none focus:ring-1 focus:ring-blue-500 
                    backdrop-blur supports-[backdrop-filter]:bg-zinc-800/70"
-                                    style={{
-                                        position: "relative",
-                                        zIndex: 50,
-                                    }}
-                                >
-                                    {[10, 20, 50].map((opt) => (
-                                        <option key={opt} value={opt} className="bg-zinc-800 text-zinc-200">
-                                            {opt}
-                                        </option>
-                                    ))}
-                                </select>
+                                        style={{
+                                            position: "relative",
+                                            zIndex: 50,
+                                        }}
+                                    >
+                                        {[10, 20, 50].map((opt) => (
+                                            <option key={opt} value={opt} className="bg-zinc-800 text-zinc-200">
+                                                {opt}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                    )}
-
-                </CardContent>
-            </Card>
-
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Banner flotante con eliminar */}
             {selected.length > 0 && (
