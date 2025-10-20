@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useRef } from "react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { Button, } from "@/components/ui/button";
@@ -65,7 +65,7 @@ const STAGE_MESSAGES = {
     },
     transcribing: {
         title: "Transcription request queued",
-        description: "We've asked AssemblyAI to transcribe your audio.",
+        description: "We've send your request for transcription.",
     },
     queued: {
         title: "Waiting for processing",
@@ -98,6 +98,9 @@ export default function UploadPage() {
     const [loadingStage, setLoadingStage] = useState(null);
 
     const [duration, setDuration] = useState(0)
+
+    const loadingCardRef = useRef(null);
+    const resultsSectionRef = useRef(null);
 
     useEffect(() => {
         const getUser = async () => {
@@ -172,6 +175,24 @@ export default function UploadPage() {
     };
 
     const totalFmt = formatTime(duration);
+
+    useEffect(() => {
+        if (loading && loadingCardRef.current) {
+            const timer = requestAnimationFrame(() => {
+                loadingCardRef.current?.focus();
+            });
+            return () => cancelAnimationFrame(timer);
+        }
+    }, [loading]);
+
+    useEffect(() => {
+        if (!loading && results.length > 0 && resultsSectionRef.current) {
+            const timer = requestAnimationFrame(() => {
+                resultsSectionRef.current?.focus();
+            });
+            return () => cancelAnimationFrame(timer);
+        }
+    }, [loading, results]);
 
     return (
         <div className="w-full min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
@@ -499,7 +520,11 @@ export default function UploadPage() {
                         </CardContent>
                     </Card>
                     {results.length > 0 && (
-                        <section className="mt-8 space-y-4">
+                        <section
+                            ref={resultsSectionRef}
+                            tabIndex={-1}
+                            className="mt-8 space-y-4 focus:outline-none focus:ring-blue-500/50 rounded-md"
+                        >
                             <h2 className="text-xl font-semibold">Results</h2>
                             {results.map((r, i) => (
                                 <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-4">
@@ -513,6 +538,8 @@ export default function UploadPage() {
                     <AnimatePresence>
                         {loading && (
                             <motion.div
+                                ref={loadingCardRef}
+                                tabIndex={-1}
                                 key="transcription-progress"
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
