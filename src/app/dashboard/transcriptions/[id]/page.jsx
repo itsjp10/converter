@@ -16,6 +16,8 @@ export default function SingleTranscription() {
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [downloadingFormat, setDownloadingFormat] = useState(null);
+    const [downloadError, setDownloadError] = useState(null);
 
     //fetching the user
     useEffect(() => {
@@ -91,6 +93,50 @@ export default function SingleTranscription() {
             return `${String(seconds).padStart(2, "0")} sec`;
         }
     }
+
+    const sanitizeFilename = (title, extension) => {
+        const safeTitle = title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/gi, "-")
+            .replace(/^-+|-+$/g, "") || "transcription";
+        return `${safeTitle}.${extension}`;
+    };
+
+    const handleDownload = async (format) => {
+        if (!transcription || downloadingFormat) return;
+
+        setDownloadError(null);
+        setDownloadingFormat(format);
+
+        try {
+            const res = await fetch(`/api/transcriptions/${transcription.id}/export?format=${format}`);
+            if (!res.ok) {
+                if (res.status === 404) throw new Error("Transcription not found");
+                if (res.status === 403) throw new Error("You do not have access to this transcription");
+                if (res.status === 401) throw new Error("Please sign in to export");
+                const { error: message } = await res.json().catch(() => ({ error: "Failed to export transcription" }));
+                throw new Error(message || "Failed to export transcription");
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+
+            const disposition = res.headers.get("Content-Disposition");
+            const match = disposition?.match(/filename="(.+?)"/i);
+            link.download = match?.[1] || sanitizeFilename(transcription.title, format);
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            setDownloadError(err.message || "Failed to export transcription");
+        } finally {
+            setDownloadingFormat(null);
+        }
+    };
 
     const handleDelete = async () => {
         if (!transcription) return;
@@ -299,18 +345,33 @@ export default function SingleTranscription() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-3">
-                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                <button
+                                    onClick={() => handleDownload("txt")}
+                                    disabled={downloadingFormat !== null}
+                                    className={`flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors ${downloadingFormat ? "opacity-60 cursor-not-allowed" : "hover:cursor-pointer"}`}
+                                >
                                     <FileText className="h-4 w-4" />
-                                    Download .TXT
+                                    {downloadingFormat === "txt" ? "Preparing..." : "Download .TXT"}
                                 </button>
-                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                <button
+                                    onClick={() => handleDownload("docx")}
+                                    disabled={downloadingFormat !== null}
+                                    className={`flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors ${downloadingFormat ? "opacity-60 cursor-not-allowed" : "hover:cursor-pointer"}`}
+                                >
                                     <FileType className="h-4 w-4" />
-                                    Download .DOCX
+                                    {downloadingFormat === "docx" ? "Preparing..." : "Download .DOCX"}
                                 </button>
-                                <button className="flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors hover:cursor-pointer">
+                                <button
+                                    onClick={() => handleDownload("xlsx")}
+                                    disabled={downloadingFormat !== null}
+                                    className={`flex w-full items-center gap-2 rounded-md bg-white/5 hover:bg-white/10 px-3 py-2 text-sm text-zinc-200 transition-colors ${downloadingFormat ? "opacity-60 cursor-not-allowed" : "hover:cursor-pointer"}`}
+                                >
                                     <FileSpreadsheet className="h-4 w-4" />
-                                    Download .XLSX
+                                    {downloadingFormat === "xlsx" ? "Preparing..." : "Download .XLSX"}
                                 </button>
+                                {downloadError && (
+                                    <p className="text-xs text-red-400">{downloadError}</p>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
