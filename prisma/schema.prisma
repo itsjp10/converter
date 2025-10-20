@@ -19,6 +19,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transcriptions Transcription[] // A user can have multiple transcriptions
+  payments PaymentTransaction[]
 }
 
 model Transcription {
@@ -31,4 +32,16 @@ model Transcription {
   updatedAt DateTime @updatedAt
   user User? @relation(fields: [userId], references: [id])
   userId String?
+}
+
+model PaymentTransaction {
+  id String @id @default(cuid())
+  transactionId String @unique
+  reference String
+  minutes Int
+  amountInCents Int
+  status String
+  user User @relation(fields: [userId], references: [id])
+  userId String
+  createdAt DateTime @default(now())
 }

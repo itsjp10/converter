@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType, FileSpreadsheet, ArrowLeft, LogIn } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Loading from "./loading";
+import { AddBalanceSheet } from "@/components/add-balance-sheet";
 
 export default function SingleTranscription() {
     const { id } = useParams();
@@ -264,10 +265,15 @@ export default function SingleTranscription() {
                                     <Clock className="h-4 w-4 text-indigo-400" />
                                     <span>{user.credits} minutes</span>
                                 </div>
-                                <button className="flex items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20 transition-colors hover:cursor-pointer">
-                                    <Crown className="h-4 w-4" />
-                                    Subscribe
-                                </button>
+                                <AddBalanceSheet triggerLabel="Subscribe">
+                                    <button
+                                        type="button"
+                                        className="flex w-full items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 transition-colors hover:bg-indigo-500/20 hover:cursor-pointer"
+                                    >
+                                        <Crown className="h-4 w-4" />
+                                        Subscribe
+                                    </button>
+                                </AddBalanceSheet>
                             </CardContent>
                         </Card>
                     </div>

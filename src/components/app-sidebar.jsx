@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
+import { AddBalanceSheet } from "@/components/add-balance-sheet"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -79,13 +80,19 @@ export function AppSidebar({ ...props }) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarSeparator/>
-      <SidebarFooter>
-        {isLoaded && isSignedIn && user ? <NavUser
-          user={{
-            name: user.fullName,
-            email: user.emailAddresses[0]?.emailAddress,
-            avatar: user.imageUrl,
-          }} /> : <NavUser/>}
+      <SidebarFooter className="space-y-4 px-2 pb-4">
+        <AddBalanceSheet />
+        {isLoaded && isSignedIn && user ? (
+          <NavUser
+            user={{
+              name: user.fullName,
+              email: user.emailAddresses[0]?.emailAddress,
+              avatar: user.imageUrl,
+            }}
+          />
+        ) : (
+          <NavUser />
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
