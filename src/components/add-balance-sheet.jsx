@@ -1,7 +1,7 @@
 /* global WidgetCheckout */
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Wallet, Sparkles } from "lucide-react";
 
 import { MINUTE_PACKAGES } from "@/config/balance-packages";
@@ -42,15 +42,133 @@ export function AddBalanceSheet({
     triggerClassName = "",
     triggerLabel = "Add balance",
     children,
+    onPaymentCompleted,
 }) {
     const [open, setOpen] = useState(false);
-    const [isLaunching, setIsLaunching] = useState(false);
+    const [pendingPackageId, setPendingPackageId] = useState(null);
     const [checkoutError, setCheckoutError] = useState(null);
+    const [paymentFeedback, setPaymentFeedback] = useState(null);
     const { ready: wompiReady, status: wompiStatus } = useWompiCheckout();
     const missingPublicKey = WOMPI_PUBLIC_KEY.length === 0;
-    const checkoutDisabled = missingPublicKey || !wompiReady || isLaunching;
+    const isProcessing = pendingPackageId !== null;
+    const disableAll = missingPublicKey || !wompiReady || isProcessing;
 
-    const handleCheckout = async (pkg) => {
+    const resetState = useCallback(() => {
+        setPendingPackageId(null);
+    }, []);
+
+    const handleCheckoutResult = useCallback(async (result, pkg, reference) => {
+        setCheckoutError(null);
+
+        const event = typeof result?.event === "string" ? result.event.toUpperCase() : undefined;
+        const transaction = result?.transaction;
+        const transactionId = transaction?.id || result?.transactionId;
+        const transactionStatus = typeof transaction?.status === "string" ? transaction.status.toUpperCase() : undefined;
+
+        try {
+            if (!transactionId) {
+                if (event === "CLOSED") {
+                    setPaymentFeedback({
+                        type: "info",
+                        title: "Checkout closed",
+                        message: "You closed the payment window before finishing the transaction.",
+                    });
+                } else {
+                    setPaymentFeedback({
+                        type: "warning",
+                        title: "Payment not completed",
+                        message: "We couldn't retrieve the transaction result. Please try again.",
+                    });
+                }
+                onPaymentCompleted?.({
+                    status: event || transactionStatus || "CLOSED",
+                    reference,
+                    package: pkg,
+                });
+                return;
+            }
+
+            const verifyResponse = await fetch(`/api/payments/wompi/transaction?transactionId=${transactionId}`);
+            const verifyData = await verifyResponse.json();
+
+            if (!verifyResponse.ok) {
+                throw new Error(verifyData?.error || "Failed to validate the transaction.");
+            }
+
+            const normalizedStatus = (verifyData.status || transactionStatus || "").toUpperCase();
+            const minutesAwarded = verifyData.minutes ?? pkg.minutes ?? null;
+            const credits = verifyData.credits ?? null;
+
+            if (normalizedStatus === "APPROVED") {
+                setPaymentFeedback({
+                    type: "success",
+                    title: "Payment approved",
+                    message: `We added ${minutesAwarded ?? pkg.minutes} minutes to your balance.`,
+                });
+                onPaymentCompleted?.({
+                    status: "APPROVED",
+                    minutes: minutesAwarded,
+                    credits,
+                    transactionId,
+                    reference,
+                    package: pkg,
+                });
+            } else if (normalizedStatus === "PENDING") {
+                setPaymentFeedback({
+                    type: "pending",
+                    title: "Payment pending",
+                    message: verifyData.message || "We will update your balance once the payment is confirmed.",
+                });
+                onPaymentCompleted?.({
+                    status: "PENDING",
+                    minutes: minutesAwarded,
+                    credits,
+                    transactionId,
+                    reference,
+                    package: pkg,
+                });
+            } else {
+                setPaymentFeedback({
+                    type: "error",
+                    title: "Payment not approved",
+                    message: verifyData.message || "The transaction was declined. Please try again with another payment method.",
+                });
+                onPaymentCompleted?.({
+                    status: normalizedStatus || "DECLINED",
+                    minutes: minutesAwarded,
+                    credits,
+                    transactionId,
+                    reference,
+                    package: pkg,
+                });
+            }
+        } catch (error) {
+            console.error("[Wompi] Unable to verify payment", error);
+            setPaymentFeedback({
+                type: "error",
+                title: "Unable to verify payment",
+                message: error.message || "We couldn't confirm the transaction. Please review it later in your payment history.",
+            });
+            onPaymentCompleted?.({
+                status: "ERROR",
+                reference,
+                package: pkg,
+                message: error.message,
+            });
+        } finally {
+            resetState();
+        }
+    }, [onPaymentCompleted, resetState]);
+
+    useEffect(() => {
+        if (!open) {
+            setCheckoutError(null);
+            setPaymentFeedback(null);
+            resetState();
+        }
+    }, [open, resetState]);
+
+    const handleCheckout = useCallback(async (pkg) => {
         if (typeof window === "undefined") return;
         if (!window.WidgetCheckout) {
             console.error("[Wompi] WidgetCheckout not available on window.");
@@ -66,7 +184,8 @@ export function AddBalanceSheet({
         }
 
         setCheckoutError(null);
-        setIsLaunching(true);
+        setPaymentFeedback(null);
+        setPendingPackageId(pkg.id);
 
         const reference = buildReference(pkg.id);
 
@@ -102,14 +221,17 @@ export function AddBalanceSheet({
                 },
             });
 
-            checkout.open(() => setOpen(false));
+            checkout.open((result) => {
+                handleCheckoutResult(result, pkg, reference).finally(() => {
+                    setOpen(false);
+                });
+            });
         } catch (error) {
             console.error("[Wompi] Unable to open widget", error);
             setCheckoutError(error.message || "An unexpected error occurred while creating the payment.");
-        } finally {
-            setIsLaunching(false);
+            resetState();
         }
-    };
+    }, [handleCheckoutResult, missingPublicKey, resetState, wompiReady]);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -136,6 +258,25 @@ export function AddBalanceSheet({
                     </SheetDescription>
                 </SheetHeader>
 
+                {paymentFeedback && (
+                    <div
+                        className={`rounded-md border px-4 py-3 text-sm ${
+                            paymentFeedback.type === "success"
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                                : paymentFeedback.type === "error"
+                                    ? "border-red-500/40 bg-red-500/10 text-red-200"
+                                    : paymentFeedback.type === "pending"
+                                        ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                                        : "border-blue-400/40 bg-blue-500/10 text-blue-100"
+                        }`}
+                    >
+                        <p className="font-semibold">{paymentFeedback.title}</p>
+                        {paymentFeedback.message && (
+                            <p className="mt-1 text-xs text-white/80">{paymentFeedback.message}</p>
+                        )}
+                    </div>
+                )}
+
                 <div className="space-y-4">
                     {MINUTE_PACKAGES.map((pkg) => (
                         <div
@@ -159,10 +300,10 @@ export function AddBalanceSheet({
                             </div>
                             <Button
                                 onClick={() => handleCheckout(pkg)}
-                                disabled={checkoutDisabled}
+                                disabled={disableAll}
                                 className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
                             >
-                                {isLaunching ? "Preparing checkout..." : "Purchase with Wompi"}
+                                {pendingPackageId === pkg.id ? "Preparing checkout..." : "Purchase with Wompi"}
                             </Button>
                         </div>
                     ))}

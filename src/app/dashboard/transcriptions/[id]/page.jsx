@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType, FileSpreadsheet, ArrowLeft, LogIn } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Loading from "./loading";
@@ -19,15 +19,23 @@ export default function SingleTranscription() {
     const [isLoading, setIsLoading] = useState(true);
     const [downloadingFormat, setDownloadingFormat] = useState(null);
     const [downloadError, setDownloadError] = useState(null);
+    const [paymentNotice, setPaymentNotice] = useState(null);
+
+    const fetchUserData = useCallback(async () => {
+        const res = await fetch("/api/user");
+        if (!res.ok) {
+            throw new Error(`User fetch failed: ${res.status}`);
+        }
+        const data = await res.json();
+        setUser(data.user);
+        return data.user;
+    }, []);
 
     //fetching the user
     useEffect(() => {
         const getUser = async () => {
             try {
-                const res = await fetch("/api/user");
-                if (!res.ok) throw new Error(`User fetch failed: ${res.status}`);
-                const data = await res.json();
-                setUser(data.user);
+                await fetchUserData();
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -35,7 +43,7 @@ export default function SingleTranscription() {
             }
         };
         getUser();
-    }, []);
+    }, [fetchUserData]);
 
     useEffect(() => {
         async function fetchTranscription() {
@@ -94,6 +102,51 @@ export default function SingleTranscription() {
             return `${String(seconds).padStart(2, "0")} sec`;
         }
     }
+
+    const handlePaymentCompleted = useCallback(async ({ status, minutes, credits, message }) => {
+        const normalized = (status || "").toUpperCase();
+
+        if (normalized === "APPROVED") {
+            if (typeof credits === "number") {
+                setUser((prev) => (prev ? { ...prev, credits } : prev));
+            } else {
+                try {
+                    await fetchUserData();
+                } catch (err) {
+                    console.error("Unable to refresh user after payment", err);
+                }
+            }
+            setPaymentNotice({
+                type: "success",
+                title: "Payment approved",
+                description: message || `We added ${minutes ?? ""} minutes to your balance.`,
+            });
+        } else if (normalized === "PENDING") {
+            setPaymentNotice({
+                type: "pending",
+                title: "Payment pending",
+                description: message || "We'll update your balance once the payment is confirmed.",
+            });
+        } else if (normalized === "DECLINED" || normalized === "REJECTED" || normalized === "VOIDED") {
+            setPaymentNotice({
+                type: "error",
+                title: "Payment declined",
+                description: message || "The transaction was not approved. Please try again with another payment method.",
+            });
+        } else if (normalized === "ERROR") {
+            setPaymentNotice({
+                type: "error",
+                title: "Payment verification failed",
+                description: message || "We couldn't verify the transaction. Please review it later.",
+            });
+        } else {
+            setPaymentNotice({
+                type: "info",
+                title: "Checkout closed",
+                description: "The payment window closed before finishing the transaction.",
+            });
+        }
+    }, [fetchUserData]);
 
     const sanitizeFilename = (title, extension) => {
         const safeTitle = title
@@ -239,6 +292,15 @@ export default function SingleTranscription() {
     return (
         <div className="flex w-full justify-center px-4 py-8">
             <div className="w-full max-w-6xl flex flex-col gap-6">
+                {paymentNotice && (
+                    <div role="status" aria-live="polite" className={`rounded-md border px-4 py-3 text-sm ${paymentNotice.type === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : paymentNotice.type === "error" ? "border-red-500/40 bg-red-500/10 text-red-200" : (paymentNotice.type === "pending" || paymentNotice.type === "warning") ? "border-amber-400/40 bg-amber-500/10 text-amber-100" : "border-blue-400/40 bg-blue-500/10 text-blue-100"}`}>
+                        <p className="font-semibold">{paymentNotice.title}</p>
+                        {paymentNotice.description && (
+                            <p className="mt-1 text-xs text-white/80">{paymentNotice.description}</p>
+                        )}
+                    </div>
+                )}
+
                 {/* Fila 1: Back */}
                 <div>
                     <button
@@ -263,9 +325,12 @@ export default function SingleTranscription() {
                             <CardContent className="flex flex-col gap-4">
                                 <div className="flex items-center gap-2 text-sm text-zinc-400">
                                     <Clock className="h-4 w-4 text-indigo-400" />
-                                    <span>{user.credits} minutes</span>
+                                    <span>{(user?.credits ?? 0)} minutes</span>
                                 </div>
-                                <AddBalanceSheet triggerLabel="Subscribe">
+                                <AddBalanceSheet
+                                    triggerLabel="Subscribe"
+                                    onPaymentCompleted={handlePaymentCompleted}
+                                >
                                     <button
                                         type="button"
                                         className="flex w-full items-center justify-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-2 text-sm text-indigo-300 transition-colors hover:bg-indigo-500/20 hover:cursor-pointer"

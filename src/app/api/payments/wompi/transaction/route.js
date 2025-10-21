@@ -40,14 +40,16 @@ export async function GET(req) {
         });
 
         if (!wompiResponse.ok) {
-            const message = await wompiResponse.text();
+            const details = await wompiResponse.text().catch(() => "");
             return NextResponse.json(
-                { error: "Failed to retrieve transaction from Wompi", details: message },
-                { status: 502 },
+                { error: "Failed to retrieve transaction from Wompi", details },
+                { status: wompiResponse.status },
             );
         }
 
-        const { data } = await wompiResponse.json();
+        const payload = await wompiResponse.json();
+        const data = payload?.data;
+
         if (!data) {
             return NextResponse.json({ error: "Invalid Wompi response" }, { status: 502 });
         }
@@ -72,68 +74,64 @@ export async function GET(req) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        const existingPayment = await findPaymentTransaction(transactionId);
+        const existingPayment = await prisma.paymentTransaction.findUnique({
+            where: { transactionId },
+            select: { status: true },
+        });
 
-        if (existingPayment) {
-            return NextResponse.json({
-                status: existingPayment.status,
-                minutes: existingPayment.minutes,
-                amountInCents: existingPayment.amountInCents,
-                message: existingPayment.status === "APPROVED"
-                    ? "This payment was already processed."
-                    : "Payment is still pending.",
-            });
-        }
-
+        const previousStatus = existingPayment?.status?.toUpperCase() ?? null;
         const status = data.status?.toUpperCase() ?? "PENDING";
         const minutesToAdd = status === "APPROVED" ? selectedPackage.minutes : 0;
 
-        await recordPaymentTransaction({
-            transactionId,
-            reference: data.reference,
-            minutes: selectedPackage.minutes,
-            amountInCents: selectedPackage.amountInCents,
-            status,
-            userId: user.id,
+        await prisma.paymentTransaction.upsert({
+            where: { transactionId },
+            update: {
+                reference: data.reference,
+                minutes: selectedPackage.minutes,
+                amountInCents: selectedPackage.amountInCents,
+                status,
+                userId: user.id,
+            },
+            create: {
+                transactionId,
+                reference: data.reference,
+                minutes: selectedPackage.minutes,
+                amountInCents: selectedPackage.amountInCents,
+                status,
+                user: {
+                    connect: { id: user.id },
+                },
+            },
         });
 
-        if (status === "APPROVED") {
-            await prisma.user.update({
+        let updatedCredits = user.credits;
+
+        if (status === "APPROVED" && previousStatus !== "APPROVED") {
+            const updatedUser = await prisma.user.update({
                 where: { id: user.id },
                 data: { credits: user.credits + minutesToAdd },
             });
+            updatedCredits = updatedUser.credits;
         }
 
         return NextResponse.json({
             status,
             minutes: status === "APPROVED" ? selectedPackage.minutes : undefined,
             amountInCents: selectedPackage.amountInCents,
+            transactionId,
+            credits: updatedCredits,
             message:
                 status === "APPROVED"
-                    ? "Balance updated successfully."
+                    ? previousStatus === "APPROVED"
+                        ? "This payment was already processed."
+                        : "Balance updated successfully."
                     : "We will update your balance once the payment is confirmed.",
         });
     } catch (error) {
         console.error("Wompi verification error", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json(
+            { error: "Unable to verify payment", details: error.message ?? "Unknown error" },
+            { status: 500 },
+        );
     }
 }
-
-async function findPaymentTransaction(transactionId) {
-    const rows = await prisma.$queryRaw`
-        SELECT "transactionId", "reference", "minutes", "amountInCents", "status"
-        FROM "PaymentTransaction"
-        WHERE "transactionId" = ${transactionId}
-        LIMIT 1
-    `;
-
-    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-}
-
-async function recordPaymentTransaction({ transactionId, reference, minutes, amountInCents, status, userId }) {
-    await prisma.$executeRaw`
-        INSERT INTO "PaymentTransaction" ("transactionId", "reference", "minutes", "amountInCents", "status", "userId")
-        VALUES (${transactionId}, ${reference}, ${minutes}, ${amountInCents}, ${status}, ${userId})
-    `;
-}
-
