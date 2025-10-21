@@ -6,6 +6,7 @@ import { Copy, Trash2, Calendar, Clock3, Clock, Check, Crown, FileText, FileType
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Loading from "./loading";
 import { AddBalanceSheet } from "@/components/add-balance-sheet";
+import { useDashboardBanner } from "@/components/dashboard-banner-provider";
 
 export default function SingleTranscription() {
     const { id } = useParams();
@@ -19,7 +20,7 @@ export default function SingleTranscription() {
     const [isLoading, setIsLoading] = useState(true);
     const [downloadingFormat, setDownloadingFormat] = useState(null);
     const [downloadError, setDownloadError] = useState(null);
-    const [paymentNotice, setPaymentNotice] = useState(null);
+    const { showBanner } = useDashboardBanner();
 
     const fetchUserData = useCallback(async () => {
         const res = await fetch("/api/user");
@@ -116,37 +117,37 @@ export default function SingleTranscription() {
                     console.error("Unable to refresh user after payment", err);
                 }
             }
-            setPaymentNotice({
+            showBanner({
                 type: "success",
                 title: "Payment approved",
-                description: message || `We added ${minutes ?? ""} minutes to your balance.`,
+                message: message || `We added ${minutes ?? ""} minutes to your balance.`,
             });
         } else if (normalized === "PENDING") {
-            setPaymentNotice({
+            showBanner({
                 type: "pending",
                 title: "Payment pending",
-                description: message || "We'll update your balance once the payment is confirmed.",
+                message: message || "We'll update your balance once the payment is confirmed.",
             });
         } else if (normalized === "DECLINED" || normalized === "REJECTED" || normalized === "VOIDED") {
-            setPaymentNotice({
+            showBanner({
                 type: "error",
                 title: "Payment declined",
-                description: message || "The transaction was not approved. Please try again with another payment method.",
+                message: message || "The transaction was not approved. Please try again with another payment method.",
             });
         } else if (normalized === "ERROR") {
-            setPaymentNotice({
+            showBanner({
                 type: "error",
                 title: "Payment verification failed",
-                description: message || "We couldn't verify the transaction. Please review it later.",
+                message: message || "We couldn't verify the transaction. Please review it later.",
             });
         } else {
-            setPaymentNotice({
+            showBanner({
                 type: "info",
                 title: "Checkout closed",
-                description: "The payment window closed before finishing the transaction.",
+                message: "The payment window closed before finishing the transaction.",
             });
         }
-    }, [fetchUserData]);
+    }, [fetchUserData, showBanner]);
 
     const sanitizeFilename = (title, extension) => {
         const safeTitle = title
@@ -292,16 +293,7 @@ export default function SingleTranscription() {
     return (
         <div className="flex w-full justify-center px-4 py-8">
             <div className="w-full max-w-6xl flex flex-col gap-6">
-                {paymentNotice && (
-                    <div role="status" aria-live="polite" className={`rounded-md border px-4 py-3 text-sm ${paymentNotice.type === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : paymentNotice.type === "error" ? "border-red-500/40 bg-red-500/10 text-red-200" : (paymentNotice.type === "pending" || paymentNotice.type === "warning") ? "border-amber-400/40 bg-amber-500/10 text-amber-100" : "border-blue-400/40 bg-blue-500/10 text-blue-100"}`}>
-                        <p className="font-semibold">{paymentNotice.title}</p>
-                        {paymentNotice.description && (
-                            <p className="mt-1 text-xs text-white/80">{paymentNotice.description}</p>
-                        )}
-                    </div>
-                )}
-
-                {/* Fila 1: Back */}
+                                {/* Fila 1: Back */}
                 <div>
                     <button
                         onClick={() => router.back()}

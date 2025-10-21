@@ -1,4 +1,3 @@
-/* global WidgetCheckout */
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -6,6 +5,7 @@ import { Wallet, Sparkles } from "lucide-react";
 
 import { MINUTE_PACKAGES } from "@/config/balance-packages";
 import { useWompiCheckout } from "@/hooks/use-wompi-checkout";
+import { useDashboardBanner } from "@/components/dashboard-banner-provider";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
@@ -43,12 +43,14 @@ export function AddBalanceSheet({
     triggerLabel = "Add balance",
     children,
     onPaymentCompleted,
+    variant = "default",
 }) {
     const [open, setOpen] = useState(false);
     const [pendingPackageId, setPendingPackageId] = useState(null);
     const [checkoutError, setCheckoutError] = useState(null);
-    const [paymentFeedback, setPaymentFeedback] = useState(null);
     const { ready: wompiReady, status: wompiStatus } = useWompiCheckout();
+    const { showBanner } = useDashboardBanner();
+
     const missingPublicKey = WOMPI_PUBLIC_KEY.length === 0;
     const isProcessing = pendingPackageId !== null;
     const disableAll = missingPublicKey || !wompiReady || isProcessing;
@@ -57,189 +59,206 @@ export function AddBalanceSheet({
         setPendingPackageId(null);
     }, []);
 
-    const handleCheckoutResult = useCallback(async (result, pkg, reference) => {
-        setCheckoutError(null);
+    const broadcastStatus = useCallback((detail) => {
+        if (typeof window === "undefined") return;
+        window.dispatchEvent(new CustomEvent("dashboard:payment", { detail }));
+    }, []);
 
-        const event = typeof result?.event === "string" ? result.event.toUpperCase() : undefined;
-        const transaction = result?.transaction;
-        const transactionId = transaction?.id || result?.transactionId;
-        const transactionStatus = typeof transaction?.status === "string" ? transaction.status.toUpperCase() : undefined;
+    const handleCheckoutResult = useCallback(
+        async (result, pkg, reference) => {
+            setCheckoutError(null);
 
-        try {
-            if (!transactionId) {
-                if (event === "CLOSED") {
-                    setPaymentFeedback({
-                        type: "info",
-                        title: "Checkout closed",
-                        message: "You closed the payment window before finishing the transaction.",
-                    });
-                } else {
-                    setPaymentFeedback({
-                        type: "warning",
-                        title: "Payment not completed",
-                        message: "We couldn't retrieve the transaction result. Please try again.",
-                    });
+            const event = typeof result?.event === "string" ? result.event.toUpperCase() : undefined;
+            const transaction = result?.transaction;
+            const transactionId = transaction?.id || result?.transactionId;
+            const transactionStatus = typeof transaction?.status === "string" ? transaction.status.toUpperCase() : undefined;
+
+            try {
+                if (!transactionId) {
+                    const fallbackStatus = event || transactionStatus || "CLOSED";
+                    const isClosed = fallbackStatus === "CLOSED";
+                    const bannerPayload = isClosed
+                        ? {
+                            type: "info",
+                            title: "Checkout closed",
+                            message: "You closed the payment window before finishing the transaction.",
+                        }
+                        : {
+                            type: "warning",
+                            title: "Payment not completed",
+                            message: "We couldn't retrieve the transaction result. Please try again.",
+                        };
+                    showBanner(bannerPayload);
+                    const payload = {
+                        status: fallbackStatus,
+                        reference,
+                        package: pkg,
+                        message: bannerPayload.message,
+                    };
+                    onPaymentCompleted?.(payload);
+                    broadcastStatus(payload);
+                    return;
                 }
-                onPaymentCompleted?.({
-                    status: event || transactionStatus || "CLOSED",
+
+                const verifyResponse = await fetch(`/api/payments/wompi/transaction?transactionId=${transactionId}`);
+                const verifyData = await verifyResponse.json();
+
+                if (!verifyResponse.ok) {
+                    throw new Error(verifyData?.error || "Failed to validate the transaction.");
+                }
+
+                const normalizedStatus = (verifyData.status || transactionStatus || "").toUpperCase();
+                const minutesAwarded = verifyData.minutes ?? pkg.minutes ?? null;
+                const credits = verifyData.credits ?? null;
+                const defaultMessage = verifyData.message || undefined;
+
+                if (normalizedStatus === "APPROVED") {
+                    const message = defaultMessage || `We added ${minutesAwarded ?? pkg.minutes} minutes to your balance.`;
+                    showBanner({ type: "success", title: "Payment approved", message });
+                    const payload = {
+                        status: "APPROVED",
+                        minutes: minutesAwarded,
+                        credits,
+                        transactionId,
+                        reference,
+                        package: pkg,
+                        message,
+                    };
+                    onPaymentCompleted?.(payload);
+                    broadcastStatus(payload);
+                } else if (normalizedStatus === "PENDING") {
+                    const message = defaultMessage || "We will update your balance once the payment is confirmed.";
+                    showBanner({ type: "pending", title: "Payment pending", message });
+                    const payload = {
+                        status: "PENDING",
+                        minutes: minutesAwarded,
+                        credits,
+                        transactionId,
+                        reference,
+                        package: pkg,
+                        message,
+                    };
+                    onPaymentCompleted?.(payload);
+                    broadcastStatus(payload);
+                } else {
+                    const message = defaultMessage || "The transaction was declined. Please try again with another payment method.";
+                    showBanner({ type: "error", title: "Payment not approved", message });
+                    const payload = {
+                        status: normalizedStatus || "DECLINED",
+                        minutes: minutesAwarded,
+                        credits,
+                        transactionId,
+                        reference,
+                        package: pkg,
+                        message,
+                    };
+                    onPaymentCompleted?.(payload);
+                    broadcastStatus(payload);
+                }
+            } catch (error) {
+                console.error("[Wompi] Unable to verify payment", error);
+                const message = error.message || "We couldn't confirm the transaction. Please review it later in your payment history.";
+                showBanner({ type: "error", title: "Unable to verify payment", message });
+                const payload = {
+                    status: "ERROR",
                     reference,
                     package: pkg,
-                });
+                    message,
+                };
+                onPaymentCompleted?.(payload);
+                broadcastStatus(payload);
+            } finally {
+                resetState();
+            }
+        },
+        [onPaymentCompleted, resetState, showBanner],
+    );
+
+    const handleCheckout = useCallback(
+        async (pkg) => {
+            if (typeof window === "undefined") return;
+            if (!window.WidgetCheckout) {
+                console.error("[Wompi] WidgetCheckout not available on window.");
+                return;
+            }
+            if (!wompiReady) {
+                console.warn("[Wompi] Checkout attempted before script finished loading.");
+                return;
+            }
+            if (missingPublicKey) {
+                console.error("[Wompi] Public key not configured.");
                 return;
             }
 
-            const verifyResponse = await fetch(`/api/payments/wompi/transaction?transactionId=${transactionId}`);
-            const verifyData = await verifyResponse.json();
+            setCheckoutError(null);
+            setPendingPackageId(pkg.id);
 
-            if (!verifyResponse.ok) {
-                throw new Error(verifyData?.error || "Failed to validate the transaction.");
+            const reference = buildReference(pkg.id);
+
+            try {
+                const response = await fetch("/api/payments/wompi/signature", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        reference,
+                        amountInCents: pkg.amountInCents,
+                        currency: "COP",
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json().catch(() => ({}));
+                    throw new Error(errorBody.error || "Failed to prepare checkout signature");
+                }
+
+                const { signature } = await response.json();
+                if (!signature) {
+                    throw new Error("Checkout signature missing in response");
+                }
+
+                const checkout = new window.WidgetCheckout({
+                    currency: "COP",
+                    amountInCents: pkg.amountInCents,
+                    reference,
+                    publicKey: WOMPI_PUBLIC_KEY,
+                    redirectUrl: getRedirectUrl(),
+                    signature: {
+                        integrity: signature,
+                    },
+                });
+
+                setOpen(false);
+                checkout.open((result) => {
+                    handleCheckoutResult(result, pkg, reference);
+                });
+            } catch (error) {
+                console.error("[Wompi] Unable to open widget", error);
+                const message = error.message || "An unexpected error occurred while creating the payment.";
+                setCheckoutError(message);
+                showBanner({ type: "error", title: "Unable to start checkout", message });
+                resetState();
             }
-
-            const normalizedStatus = (verifyData.status || transactionStatus || "").toUpperCase();
-            const minutesAwarded = verifyData.minutes ?? pkg.minutes ?? null;
-            const credits = verifyData.credits ?? null;
-
-            if (normalizedStatus === "APPROVED") {
-                setPaymentFeedback({
-                    type: "success",
-                    title: "Payment approved",
-                    message: `We added ${minutesAwarded ?? pkg.minutes} minutes to your balance.`,
-                });
-                onPaymentCompleted?.({
-                    status: "APPROVED",
-                    minutes: minutesAwarded,
-                    credits,
-                    transactionId,
-                    reference,
-                    package: pkg,
-                });
-            } else if (normalizedStatus === "PENDING") {
-                setPaymentFeedback({
-                    type: "pending",
-                    title: "Payment pending",
-                    message: verifyData.message || "We will update your balance once the payment is confirmed.",
-                });
-                onPaymentCompleted?.({
-                    status: "PENDING",
-                    minutes: minutesAwarded,
-                    credits,
-                    transactionId,
-                    reference,
-                    package: pkg,
-                });
-            } else {
-                setPaymentFeedback({
-                    type: "error",
-                    title: "Payment not approved",
-                    message: verifyData.message || "The transaction was declined. Please try again with another payment method.",
-                });
-                onPaymentCompleted?.({
-                    status: normalizedStatus || "DECLINED",
-                    minutes: minutesAwarded,
-                    credits,
-                    transactionId,
-                    reference,
-                    package: pkg,
-                });
-            }
-        } catch (error) {
-            console.error("[Wompi] Unable to verify payment", error);
-            setPaymentFeedback({
-                type: "error",
-                title: "Unable to verify payment",
-                message: error.message || "We couldn't confirm the transaction. Please review it later in your payment history.",
-            });
-            onPaymentCompleted?.({
-                status: "ERROR",
-                reference,
-                package: pkg,
-                message: error.message,
-            });
-        } finally {
-            resetState();
-        }
-    }, [onPaymentCompleted, resetState]);
+        },
+        [handleCheckoutResult, missingPublicKey, resetState, showBanner, wompiReady],
+    );
 
     useEffect(() => {
         if (!open) {
             setCheckoutError(null);
-            setPaymentFeedback(null);
-            resetState();
         }
-    }, [open, resetState]);
-
-    const handleCheckout = useCallback(async (pkg) => {
-        if (typeof window === "undefined") return;
-        if (!window.WidgetCheckout) {
-            console.error("[Wompi] WidgetCheckout not available on window.");
-            return;
-        }
-        if (!wompiReady) {
-            console.warn("[Wompi] Checkout attempted before script finished loading.");
-            return;
-        }
-        if (missingPublicKey) {
-            console.error("[Wompi] Public key not configured.");
-            return;
-        }
-
-        setCheckoutError(null);
-        setPaymentFeedback(null);
-        setPendingPackageId(pkg.id);
-
-        const reference = buildReference(pkg.id);
-
-        try {
-            const response = await fetch("/api/payments/wompi/signature", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    reference,
-                    amountInCents: pkg.amountInCents,
-                    currency: "COP",
-                }),
-            });
-
-            if (!response.ok) {
-                const errorBody = await response.json().catch(() => ({}));
-                throw new Error(errorBody.error || "Failed to prepare checkout signature");
-            }
-
-            const { signature } = await response.json();
-            if (!signature) {
-                throw new Error("Checkout signature missing in response");
-            }
-
-            const checkout = new window.WidgetCheckout({
-                currency: "COP",
-                amountInCents: pkg.amountInCents,
-                reference,
-                publicKey: WOMPI_PUBLIC_KEY,
-                redirectUrl: getRedirectUrl(),
-                signature: {
-                    integrity: signature,
-                },
-            });
-
-            checkout.open((result) => {
-                handleCheckoutResult(result, pkg, reference).finally(() => {
-                    setOpen(false);
-                });
-            });
-        } catch (error) {
-            console.error("[Wompi] Unable to open widget", error);
-            setCheckoutError(error.message || "An unexpected error occurred while creating the payment.");
-            resetState();
-        }
-    }, [handleCheckoutResult, missingPublicKey, resetState, wompiReady]);
+    }, [open]);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
                 {children ?? (
                     <Button
-                        variant="outline"
-                        className={`w-full justify-start gap-2 ${triggerClassName}`}
+                        variant={variant === "sidebar" ? "secondary" : "outline"}
+                        className={`w-full justify-start gap-2 ${
+                            variant === "sidebar"
+                                ? "bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20 border border-indigo-400/40"
+                                : ""
+                        } ${triggerClassName}`}
                     >
                         <Wallet className="h-4 w-4" />
                         {triggerLabel}
@@ -257,25 +276,6 @@ export function AddBalanceSheet({
                         top up your minute balance instantly.
                     </SheetDescription>
                 </SheetHeader>
-
-                {paymentFeedback && (
-                    <div
-                        className={`rounded-md border px-4 py-3 text-sm ${
-                            paymentFeedback.type === "success"
-                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                                : paymentFeedback.type === "error"
-                                    ? "border-red-500/40 bg-red-500/10 text-red-200"
-                                    : paymentFeedback.type === "pending"
-                                        ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
-                                        : "border-blue-400/40 bg-blue-500/10 text-blue-100"
-                        }`}
-                    >
-                        <p className="font-semibold">{paymentFeedback.title}</p>
-                        {paymentFeedback.message && (
-                            <p className="mt-1 text-xs text-white/80">{paymentFeedback.message}</p>
-                        )}
-                    </div>
-                )}
 
                 <div className="space-y-4">
                     {MINUTE_PACKAGES.map((pkg) => (
@@ -301,7 +301,7 @@ export function AddBalanceSheet({
                             <Button
                                 onClick={() => handleCheckout(pkg)}
                                 disabled={disableAll}
-                                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+                                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 hover:cursor-pointer"
                             >
                                 {pendingPackageId === pkg.id ? "Preparing checkout..." : "Purchase with Wompi"}
                             </Button>
